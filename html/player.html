@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en" style="font-size: 10px; font-family: Roboto, Arial, sans-serif; background-color: #FAFAFA">
+<head>
+    <meta charset="UTF-8">
+    <title>V-Play</title>
+    <script src="../js/jquery-3.3.1.js"></script>
+    <script src="../js/common.js"></script>
+</head>
+<link rel="stylesheet" type="text/css" href="../css/index.css">
+<body style="overflow-y: scroll">
+
+<script>
+
+    var isPlayHighMode = false;
+    var isPlayContinueMode = true;
+    var isPlayRandomMode = false;
+
+    function switchPlayHighMode() {
+        isPlayHighMode = !isPlayHighMode;
+        updatePlayHighMode();
+    }
+
+    function updatePlayHighMode() {
+        var div = $("#play-high");
+        if (isPlayHighMode) {
+            div.addClass("tag-selected");
+            div.removeClass("tag-unselected");
+        } else {
+            div.addClass("tag-unselected");
+            div.removeClass("tag-selected");
+        }
+    }
+
+    function switchPlayContinueMode() {
+        isPlayContinueMode = !isPlayContinueMode;
+        updatePlayContinueMode();
+    }
+
+    function updatePlayContinueMode() {
+        var div = $("#play-continue");
+        if (isPlayContinueMode) {
+            div.addClass("tag-selected");
+            div.removeClass("tag-unselected");
+        } else {
+            div.addClass("tag-unselected");
+            div.removeClass("tag-selected");
+        }
+    }
+
+    function switchPlayRandomMode() {
+        isPlayRandomMode = !isPlayRandomMode;
+        updatePlayRandomMode();
+    }
+
+    function updatePlayRandomMode() {
+        var div = $("#play-random");
+        if (isPlayRandomMode) {
+            div.addClass("tag-selected");
+            div.removeClass("tag-unselected");
+        } else {
+            div.addClass("tag-unselected");
+            div.removeClass("tag-selected");
+        }
+    }
+
+    function isTabShow(index) {
+        switch (index) {
+            case 0:
+                return !document.getElementById("tab-tags").innerHTML.includes('bbb');
+
+            case 1:
+                return !document.getElementById("tab-libs").innerHTML.includes('bbb');
+
+            case 2:
+                return !document.getElementById("tab-high").innerHTML.includes('bbb');
+
+        }
+
+        return false;
+
+    }
+
+    function clickTabIndex(index) {
+
+        document.getElementById("tab-tags").innerHTML = `<span style="color: #bbb; cursor: pointer" onclick="clickTabIndex(0)">&nbsp;&nbsp;TAGS&nbsp;&nbsp;</span>`;
+        document.getElementById("tab-libs").innerHTML = `<span style="color: #bbb; cursor: pointer" onclick="clickTabIndex(1)">&nbsp;&nbsp;LIBS&nbsp;&nbsp;</span>`;
+        document.getElementById("tab-high").innerHTML = `<span style="color: #bbb; cursor: pointer" onclick="clickTabIndex(2)">&nbsp;&nbsp;HIGH&nbsp;&nbsp;</span>`;
+        document.getElementById("tab-more").innerHTML = `<span style="color: #bbb; cursor: pointer" onclick="clickTabIndex(3)">&nbsp;&nbsp;MORE&nbsp;&nbsp;</span>`;
+
+        document.getElementById("tags").innerHTML = ``;
+        document.getElementById("lib-tags").innerHTML = ``;
+        document.getElementById("video-list").innerHTML = ``;
+        document.getElementById("high-range-add").innerHTML = ``;
+        document.getElementById("high-range-list").innerHTML = ``;
+        document.getElementById("more-options").innerHTML = ``;
+        switch (index) {
+            case 0:
+                document.getElementById("tab-tags").innerHTML =
+                    `<span>&nbsp;&nbsp;TAGS&nbsp;&nbsp;</span><img id="tag-edit" src="../img/edit.svg" style="width: 14px; cursor: pointer" onclick="startEditTags()">`;
+                updateVideoTags();
+                break;
+
+            case 1:
+                document.getElementById("tab-libs").innerHTML =
+                    `<span>&nbsp;&nbsp;LIBS&nbsp;&nbsp;</span><img id="lib-tag-mode" src="../img/expand.svg" onclick="switchLibTagMode()" style="width:14px; cursor: pointer">&nbsp;&nbsp;<span id="libs-name"></span>`;
+                showVideoList(null);
+                break;
+
+            case 2:
+                document.getElementById("tab-high").innerHTML =
+                `<span>&nbsp;&nbsp;HIGH&nbsp;&nbsp;</span><img id="high-range-edit" src="../img/add.svg" onclick="startAddHighRange()" style="width:14px; cursor: pointer">`;
+                updateVideoHighRange();
+                break;
+
+            case 3:
+                document.getElementById("tab-more").innerHTML =
+                    `<span>&nbsp;&nbsp;MORE&nbsp;&nbsp;</span>`;
+                showMoreOptions();
+                break;
+        }
+
+    }
+
+    function deleteHighRange(id, videoId) {
+        $.ajax({
+            url: "http://localhost:8880/action",
+            method: "GET",
+            data: {type: "delete-high-range", id: id},
+            dataType: "json",
+            success: function (data) {
+                if (data.code == 0) {
+                    queryVideoInformation(videoId);
+                }
+            }
+        });
+    }
+
+    function seekVideoTo(ts) {
+        document.getElementById("player").currentTime = ts / 1000;
+    }
+
+    function updateVideoHighRange() {
+        if (!isTabShow(2)) {
+            return;
+        }
+
+        var highRangesDiv = "";
+        if (highRanges.length > 0) {
+            var total = playHistory[playHistoryIndex].duration_ms;
+            for (var i = 0; i < highRanges.length; i++) {
+                var left = 900 * highRanges[i].start_ms / total;
+                var width = 900 * (highRanges[i].end_ms - highRanges[i].start_ms) / total;
+                highRangesDiv += `
+            <div style="position: relative; left: 0; top: 0; height: 20px">
+                <img style="position: absolute; left: 920px; top: 3px; width: 14px; height: 14px; cursor: pointer" onclick="deleteHighRange(${highRanges[i].id}, ${highRanges[i].video_id})" src="../img/delete.svg">
+                <span style="position: absolute; left: 0; top: 5px; width: 900px; height: 10px; border-radius: 4px; background-color: #efefef; cursor: pointer" onclick="seekVideoTo(${highRanges[i].start_ms})" />
+                <span style="position: absolute; left: ${left}px; top: 0px; width: ${width}px; height: 10px; border-radius: 4px; background-color: #F44336" />
+            </div>
+            `;
+            }
+        } else {
+            highRangesDiv = `<div style="font-size: 1.4em; text-align: -webkit-center;"><span class="icon-empty" /><br />High Ranges 列表为空</div>`;
+        }
+
+        document.getElementById("high-range-list").innerHTML = highRangesDiv;
+    }
+
+    function resetHighRange() {
+        markHighRangeStartMs = -1;
+        markHighRangeEndMs = -1;
+        try {
+            document.getElementById("high-range-edit").src = "../img/add.svg";
+            document.getElementById("high-range-edit").onclick = startAddHighRange;
+            document.getElementById("high-range-add").innerHTML = ``;
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    function markHighRangeStart() {
+        var progress = parseInt(document.getElementById("player").currentTime * 1000);
+        if (markHighRangeEndMs >= 0 && progress > markHighRangeEndMs) {
+            markHighRangeStartMs = markHighRangeEndMs;
+            markHighRangeEndMs = progress;
+        } else {
+            markHighRangeStartMs = progress;
+        }
+
+        updateAddHighRange();
+    }
+
+    function markHighRangeEnd() {
+        var progress = parseInt(document.getElementById("player").currentTime * 1000);
+        if (markHighRangeStartMs >= 0 && progress < markHighRangeStartMs) {
+            markHighRangeEndMs = markHighRangeStartMs;
+            markHighRangeStartMs = progress;
+        } else {
+            markHighRangeEndMs = progress;
+        }
+        updateAddHighRange();
+    }
+
+    function cancelMarkHighRange() {
+
+        markHighRangeStartMs = -1;
+        markHighRangeEndMs = -1;
+        resetHighRange();
+    }
+
+    function updateAddHighRange() {
+
+        var duration = playHistory[playHistoryIndex].duration_ms;
+        var left = 0;
+        var width = 0;
+
+        if (markHighRangeStartMs < 0) {
+            left = 0;
+            if (markHighRangeEndMs < 0) {
+                width = 0;
+            } else {
+                width = parseInt(900.0 * markHighRangeEndMs / duration);
+            }
+        } else {
+            left = parseInt(900.0 * markHighRangeStartMs / duration);
+            if (markHighRangeEndMs < 0) {
+                width = 900 - left;
+            } else {
+                width = parseInt(900.0 * (markHighRangeEndMs - markHighRangeStartMs) / duration);
+            }
+        }
+
+        var div = `
+            <div style="position: relative; left: 0; top: 0; height: 40px">
+                <span class="tag-bg" style="position: absolute; left: 912px; top: 0; width: 56px; height: 20px" onclick="markHighRangeStart()">标记开始</span>
+                <span class="tag-bg" style="position: absolute; left: 998px; top: 0; width: 56px; height: 20px" onclick="markHighRangeEnd()">标记结束</span>
+                <span class="tag-bg" style="position: absolute; left: 1084px; top: 0; width: 56px; height: 20px" onclick="cancelMarkHighRange()">取消标记</span>
+                <span style="position: absolute; left: 0; top: 0px; width: 900px; height: 40px; border-radius: 4px; background-color: #efefef" />
+                <span style="position: absolute; left: ${left}px; top: 0px; width: ${width}px; height: 40px; border-radius: 4px; background-color: #F44336" />
+            </div>
+        `;
+        document.getElementById("high-range-add").innerHTML = div;
+    }
+    
+    function startAddHighRange() {
+
+        document.getElementById("high-range-edit").src = "../img/done.svg";
+        document.getElementById("high-range-edit").onclick = finishAddHighRange;
+        updateAddHighRange();
+
+    }
+
+    function finishAddHighRange() {
+
+        if (markHighRangeStartMs < 0 && markHighRangeEndMs < 0) {
+            alert("标记错误");
+            return;
+        }
+
+        if (markHighRangeStartMs < 0) {
+            markHighRangeStartMs = 0;
+        }
+
+        if (markHighRangeEndMs < 0) {
+            markHighRangeEndMs = playHistory[playHistoryIndex].duration_ms;
+        }
+
+        $.ajax({
+            url: "http://localhost:8880/action",
+            method: "GET",
+            data: {type: "add-high-range", video_id: playHistory[playHistoryIndex].id, start_ms: markHighRangeStartMs, end_ms: markHighRangeEndMs},
+            dataType: "json",
+            success: function (data) {
+                if (data.code == 0) {
+                    queryVideoInformation(playHistory[playHistoryIndex].id);
+                }
+            }
+        });
+
+        resetHighRange();
+    }
+
+    function showMoreOptions() {
+        document.getElementById("more-options").innerHTML = `
+                <span id="play-high" class="tag-bg" onclick="switchPlayHighMode()">Play From HIGH</span>
+                <span id="play-continue" class="tag-bg" onclick="switchPlayContinueMode()">Play Continue</span>
+                <span id="play-random" class="tag-bg" onclick="switchPlayRandomMode()">Play Randomly</span>
+        `;
+        updatePlayHighMode();
+        updatePlayContinueMode();
+        updatePlayRandomMode();
+    }
+
+    function switchLibTagMode() {
+        var libTagMode = document.getElementById("lib-tag-mode");
+        if (libTagMode.src.endsWith("/expand.svg")) {
+            libTagMode.src = "../img/unexpand.svg";
+            fetchAllTags("lib-tags", false)
+        } else {
+            libTagMode.src = "../img/expand.svg";
+            document.getElementById("lib-tags").innerHTML = "";
+        }
+    }
+
+    function deletePlayListIndex(index) {
+        if (index == playHistory.length - 1) {
+            // 删除最后一个
+            if (index == playHistoryIndex) {
+                // 删除正在播放
+                playHistory.splice(index, 1);
+                playHistoryIndex--;
+                if (playHistoryIndex >= 0) {
+                    playVideoByHistoryIndex(playHistoryIndex);
+                } else {
+                    playNextVideo();
+                }
+            } else {
+                // 删除非正在播放
+                playHistory.splice(index, 1);
+
+                if (index < playHistoryIndex) {
+                    playHistoryIndex--;
+                }
+            }
+        } else {
+            // 删除非最后一个
+            if (index == playHistoryIndex) {
+                // 删除正在播放
+                playHistory.splice(index, 1);
+                playHistoryIndex--;
+                playNextVideo();
+            } else {
+                // 删除非正在播放
+                playHistory.splice(index, 1);
+
+                if (index < playHistoryIndex) {
+                    playHistoryIndex--;
+                }
+            }
+        }
+        showPlayList();
+    }
+
+    function showPlayList() {
+
+        if (playHistory.length > 0) {
+            var videosDiv = "";
+            for (var i = 0; i < playHistory.length; i++) {
+                videosDiv = videosDiv + genVideoListItem(playHistory[i], i);
+            }
+            document.getElementById("play-list").innerHTML = videosDiv;
+            document.getElementById("video-list-index-" + playHistoryIndex).innerHTML = `<img class="current-play" src="../img/playing.png" style="height: 30px; width: 30px; padding-top: 41px; padding-bottom: 41px; padding-left: 95px; padding-right: 95px; background-color: rgba(0, 0, 0, 0.7);">`;
+        } else {
+            document.getElementById("play-list").innerHTML = `<div style="font-size: 1.4em; text-align: -webkit-center;"><span class="icon-empty" /><br />播放列表为空</div>`;
+        }
+
+        document.getElementById("play-list").scrollTop = playHistoryIndex * 122;
+    }
+
+    function showVideoList(tagName) {
+        if (!isTabShow(1)) {
+            return;
+        }
+
+        var videosDiv = "";
+
+        if (videoList.length > 0) {
+            for (var i = 0; i < videoList.length; i++) {
+                videosDiv = videosDiv + genVideoLibItem(videoList[i]);
+            }
+        } else {
+            videosDiv = `<div style="font-size: 1.4em; text-align: -webkit-center;"><span class="icon-empty" /><br />不存在 Tag 为 <b>${tagName}</b> 视频资源</div>`;
+        }
+        document.getElementById("video-list").innerHTML = videosDiv;
+        if (tagName != null) {
+            document.getElementById("libs-name").innerHTML = `\"${tagName}\" (${videoList.length})</div>`;
+        }
+    }
+
+    function queryTagVideoList(tagId, tagName) {
+        $.ajax({
+            url: "http://localhost:8880/information",
+            method: "GET",
+            data: {type: "video-list", tag_ids: tagId, query_type: "and"},
+            dataType: "json",
+            success: function (data) {
+                if (data.code == 0 && data.data != null) {
+                    videoList = data.data;
+                    showVideoList(tagName);
+                }
+            }
+        });
+    }
+
+    function markCurrentPlayVideoProgress() {
+        if (playHistoryIndex == -1 || playHistoryIndex >= playHistory.length) {
+            return;
+        }
+
+        playHistory[playHistoryIndex].progress_ms = document.getElementById("player").currentTime * 1000;
+    }
+
+    function playVideoByHistoryIndex(index) {
+        markCurrentPlayVideoProgress();
+        playHistoryIndex = index;
+        playVideo(playHistory[index]);
+    }
+
+    function playVideoById(videoId) {
+        for (var i = 0; i < videoList.length; i++) {
+            if (videoList[i].id == videoId) {
+                playIndexVideo(i);
+                return;
+            }
+        }
+    }
+
+    function updateVideoTags() {
+        if (!isTabShow(0)) {
+            return;
+        }
+        if (tagNames == null || tagNames.length == 0) {
+            document.getElementById("tags").innerHTML = `<div class="tag-bg tag-unselected" style="margin-right: 3px" >No tag</div>&nbsp;&nbsp;`;
+            return;
+        }
+
+        var tagsDiv = "";
+        for (var i = 0; i < tagNames.length; i++) {
+            tagsDiv = tagsDiv + `<div class="tag-bg tag-unselected" style="margin-right: 3px" id="tag-${tagIds[i]}" onclick="queryTagVideoList(${tagIds[i]}, '${tagNames[i]}')">${tagNames[i]}</div>&nbsp;&nbsp;`;
+        }
+        document.getElementById("tags").innerHTML = tagsDiv;
+    }
+
+    function queryVideoInformation(videoId) {
+
+        $.ajax({
+            url: "http://localhost:8880/information",
+            method: "GET",
+            data: {type: "video", video_id: videoId},
+            dataType: "json",
+            success: function (data) {
+                if (data.code == 0) {
+                    console.log(data);
+                    tagNames = data.data.tag_names;
+                    tagIds = data.data.tag_ids == null ? [] : data.data.tag_ids;
+                    highRanges = data.data.high_ranges == null ? [] : data.data.high_ranges;
+
+                    for (var i = 0; i < highRanges.length; i++) {
+                        for (var j = i + 1; j < highRanges.length; j++) {
+                            if (highRanges[i].start_ms > highRanges[j].start_ms) {
+                                var tmp = highRanges[i];
+                                highRanges[i] = highRanges[j];
+                                highRanges[j] = tmp;
+                            }
+                        }
+                    }
+
+                    for (var i = 0; i < playHistory.length; i++) {
+                        if (playHistory[i].id == videoId) {
+                            if (playHistoryIndex == i && playHistory[i].high_ranges == null) {
+                                if (highRanges.length > 0 && isPlayHighMode) {
+                                    seekVideoTo(highRanges[0].start_ms);
+                                }
+                            }
+                            playHistory[i].high_ranges = highRanges;
+                        }
+                    }
+                    for (var i = 0; i < videoList.length; i++) {
+                        if (videoList[i].id == videoId) {
+                            videoList[i].high_ranges = highRanges;
+                        }
+                    }
+                    updateVideoTags();
+                    updateVideoHighRange();
+                }
+            }
+        });
+    }
+
+    function playVideo(video) {
+
+        videoId = video.id;
+
+        $.ajax({
+            crossDomain: true,
+            url: "http://localhost:8880/action",
+            data: {type: "play-video", video_id: video.id},
+            method: "GET"
+        });
+
+        queryVideoInformation(video.id);
+
+        document.getElementById("player").src = video.src;
+        document.getElementById("player").volume = 1.0;
+        $(".v-cover-title").removeClass("tag-selected");
+        $("#title-" + video.id).addClass("tag-selected");
+        document.getElementById("video-name").innerHTML = `&nbsp;&nbsp;${video.title}`;
+
+        if (isPlayHighMode && video.high_ranges != null && video.high_ranges.length > 0) {
+            seekVideoTo(video.high_ranges[0].start_ms);
+        } else if (isPlayContinueMode && video.progress_ms != null && video.progress_ms <= video.duration_ms - 5000) {
+            seekVideoTo(video.progress_ms);
+        }
+
+        // var information = "";
+        // information = information + `<div class="tag-bg tag-unselected" >Resolution ${video.width}x${video.height} px</div>&nbsp;&nbsp;`;
+        // information = information + `<div class="tag-bg tag-unselected" >Update ${getTimeDistanceString(video.modify_time)}</div>&nbsp;&nbsp;`;
+        // information = information + `<div class="tag-bg tag-unselected" >Viewed ${video.view_count} time(s)</div>&nbsp;&nbsp;`;
+        // document.getElementById("video-information").innerHTML = information;
+        resetEditTags();
+        resetHighRange();
+        showPlayList();
+
+    }
+
+    function moveUpInPlayList(index) {
+        if (index == 0) {
+            return;
+        }
+
+        var playHistTmp = playHistory[index];
+        playHistory[index] = playHistory[index - 1];
+        playHistory[index - 1] = playHistTmp;
+
+        if (index == playHistoryIndex) {
+            playHistoryIndex = index - 1;
+        } else if (index - 1 == playHistoryIndex) {
+            playHistoryIndex = index;
+        }
+        showPlayList();
+    }
+
+    function moveDownInPlayList(index) {
+        if (index == playHistory.length - 1) {
+            return;
+        }
+        var playHistTmp = playHistory[index];
+        playHistory[index] = playHistory[index + 1];
+        playHistory[index + 1] = playHistTmp;
+
+        if (index == playHistoryIndex) {
+            playHistoryIndex = index + 1;
+        } else if (index + 1 == playHistoryIndex) {
+            playHistoryIndex = index;
+        }
+        showPlayList();
+    }
+
+    function showPlayListOrderController(index) {
+        var content = `<img src="../img/play-up.svg" style="width: 24px; height: 24px; position: absolute; left: 0; top: 0; padding: 16px; background-color: rgba(0, 0, 0, 0.7);" onclick="moveUpInPlayList(${index})" /><img src="../img/play-down.svg" style="width: 24px; height: 24px; position: absolute; left: 0; top: 56px; padding: 16px; background-color: rgba(0, 0, 0, 0.7);" onclick="moveDownInPlayList(${index})" />`;
+        document.getElementById("play-list-order-controller-index-" + index).innerHTML = content;
+    }
+
+    function hideListOrderController(index) {
+        document.getElementById("play-list-order-controller-index-" + index).innerHTML = "";
+    }
+
+    function genVideoListItem(object, index) {
+        var isHd = ``;
+        var durationStr = genDurationStr(object.duration_ms);
+        if (object.width >= 480 && object.height >= 480) {
+            isHd = `<b><i>HD</i></b>&ensp;`;
+        }
+
+        var video =
+            `<div class="v-item" style="padding: 0px; margin-bottom: ${index == (playHistory.length - 1) ? 0 : 10 }px; width: 220px; height: 112px;" onmouseenter="javascript: loadImage('${object.md5}', '${object.gif}'); showPlayListOrderController(${index});" onmouseleave="javascript: loadImage('${object.md5}', '${object.jpg}'); hideListOrderController(${index});" >
+                <div class="v-container" style="width: 220px; height: 112px;">
+                    <img src="${object.jpg}" class="v-thumbnail" id="${object.md5}" style="width: 220px; height: 112px; object-fit: ${getThumbnailFitType(object.width, object.height)}; background: ${getThumbnailBackground(object.width, object.height)};" onclick="playVideoByHistoryIndex(${index})" />
+                    <span style="position: absolute; left: 0; top: 0;" id="video-list-index-${index}"></span>
+                    <span class="v-duration"><b>${isHd}${durationStr}</b></span>
+                    <span style="position: absolute; right: 0; top: 0; background-color: rgba(0, 0, 0, 0.7);"><img src="../img/play-delete.svg" style="height: 30px; width: 30px;" onclick="deletePlayListIndex(${index})"></span>
+                    <span style="position:absolute; left: 0; top: 0;" id="play-list-order-controller-index-${index}"></span>
+                </div>
+            </div>`
+        return video;
+    }
+
+    function genVideoLibItem(object) {
+        var isHd = ``;
+        var durationStr = genDurationStr(object.duration_ms);
+        if (object.width >= 480 && object.height >= 480) {
+            isHd = `<b><i>HD</i></b>&ensp;`;
+        }
+
+        var video =
+            `<div class="v-item" style="padding: 0px; margin-bottom: 10px; width: 220px; height: 112px; margin-right: 16px">
+                <div class="v-container" style="width: 220px; height: 112px;">
+                    <img src="${object.jpg}" class="v-thumbnail" id="${object.md5}" style="width: 220px; height: 112px; object-fit: ${getThumbnailFitType(object.width, object.height)}; background: ${getThumbnailBackground(object.width, object.height)};" onclick="playVideoById(${object.id})" onmouseenter="loadImage('${object.md5}', '${object.gif}')" onmouseleave="loadImage('${object.md5}', '${object.jpg}')" />
+                    <span class="v-duration"><b>${isHd}${durationStr}</b></span>
+                </div>
+            </div>`
+        return video;
+    }
+
+    function playNextVideo() {
+        markCurrentPlayVideoProgress();
+        // 播放下一个
+
+        var toPlayVideo;
+        if (playHistoryIndex == playHistory.length - 1) {
+            toPlayVideo = videoList[0];
+            // 重新生成
+            if (isPlayRandomMode) {
+                // 生成一个不存在的随机数
+                // 如果videolist全部都在playHistory中，则从第一个开始播放
+                // 否则产生一个不在history中的video id
+
+                var index = 0;
+                var cursor = 0;
+                for (var i = 0; i < 1000; i++) {
+                    cursor += parseInt(Math.random() * videoList.length);
+                    index = cursor % videoList.length;
+                    var includeInHistory = false;
+                    for (var j = 0; j <= playHistoryIndex; j++) {
+                        if (videoList[index].id == playHistory[j].id) {
+                            includeInHistory = true;
+                        }
+                    }
+
+                    if (!includeInHistory) {
+                        break;
+                    }
+                }
+
+                toPlayVideo = videoList[index];
+            } else {
+                var player = document.getElementById("player");
+                var src = player.src;
+                var playIndex = 0;
+                for (var i = 0; i < videoList.length; i++) {
+                    if (src.endsWith(videoList[i].src)) {
+                        playIndex = i;
+                        break;
+                    }
+                }
+
+                if (playIndex == videoList.length - 1) {
+                    toPlayVideo = videoList[0];
+                } else {
+                    toPlayVideo = videoList[i + 1];
+                }
+            }
+            playHistory[++playHistoryIndex] = toPlayVideo;
+        } else {
+            toPlayVideo = playHistory[++playHistoryIndex];
+        }
+
+        playVideo(toPlayVideo)
+    }
+
+    function playPriorVideo() {
+        markCurrentPlayVideoProgress();
+        // 播放上一个
+
+        if (playHistoryIndex == 0) {
+            // 不做任何操作
+        } else {
+            var toPlayVideo;
+            toPlayVideo = playHistory[--playHistoryIndex];
+            playVideo(toPlayVideo);
+        }
+    }
+
+    function playIndexVideo(index) {
+        markCurrentPlayVideoProgress();
+        playHistoryIndex++;
+        playHistory.splice(playHistoryIndex, 0, videoList[index]);
+        playVideo(playHistory[playHistoryIndex]);
+    }
+
+    function playForward(slowly) {
+        var player = document.getElementById("player");
+        player.currentTime += slowly ? 1.5 : 6;
+    }
+
+    function playBackward(slowly) {
+        var player = document.getElementById("player");
+        player.currentTime -= slowly ? 1.5 : 6;
+    }
+
+    function clearPlayList() {
+        playHistoryIndex = -1;
+        playHistory = [];
+        showPlayList();
+    }
+
+    function switchTag(tagId) {
+        var tag = $("#tag-" + tagId);
+        if (tag.hasClass("tag-selected")) {
+            tag.removeClass("tag-selected");
+            tag.addClass("tag-unselected");
+        } else {
+            tag.removeClass("tag-unselected");
+            tag.addClass("tag-selected");
+        }
+    }
+    
+    function getSelectedTagIds() {
+        var selectedTagIds = [];
+        $("div[id^='tag-'][class*='tag-selected']").each(function (index, element) {
+            selectedTagIds[selectedTagIds.length] = element.id.split("-")[1];
+        })
+        return selectedTagIds;
+    }
+
+    function fetchAllTags(id, mark) {
+
+        $.ajax({
+            crossDomain: true,
+            url: "http://localhost:8880/information",
+            data: {type: "tag-list"},
+            method: "GET",
+            dataType: "json",
+            success: function (data) {
+                if (data.code == 0 && data.data != null) {
+                    tagList = data.data;
+
+                    var tagsDiv = "";
+                    for (var i = 0; i < tagList.length; i++) {
+                        var selectClass = "tag-unselected";
+                        if (mark) {
+                            for (var j = 0; j < tagIds.length; j++) {
+                                if (tagList[i].id == tagIds[j]) {
+                                    selectClass = "tag-selected";
+                                    break;
+                                }
+                            }
+                            tagsDiv = tagsDiv + `<div class="tag-bg ` + selectClass + `" style="margin-right: 3px" id="tag-${tagList[i].id}" onclick="switchTag(${tagList[i].id})">${tagList[i].name} (${tagList[i].count})</div>&nbsp;&nbsp;`;
+                        } else {
+                            tagsDiv = tagsDiv + `<div class="tag-bg ` + selectClass + `" style="margin-right: 3px" id="tag-${tagList[i].id}" onclick="queryTagVideoList(${tagList[i].id}, '${tagList[i].name}')">${tagList[i].name} (${tagList[i].count})</div>&nbsp;&nbsp;`;
+                        }
+                    }
+                    document.getElementById(id).innerHTML = tagsDiv;
+                }
+            }
+        });
+    }
+
+    function deleteVideo() {
+        var videoIndex;
+        var videoTitle = "";
+        for (var i = 0; i < videoList.length; i++) {
+            if (videoList[i].id == videoId) {
+                videoTitle = videoList[i].title;
+                videoIndex = i;
+                break;
+            }
+        }
+        if (confirm("Confirm delete this video(" + videoTitle + ")?")) {
+            $.ajax({
+                crossDomain: true,
+                url: "http://localhost:8880/action",
+                data: {type: "delete-video", video_id: videoId},
+                method: "GET",
+                dataType: "json",
+                success: function (data) {
+                    if (data.code == 0) {
+                        videoList.splice(videoIndex, 1);
+                        showVideoList(null);
+                        playNextVideo();
+                    }
+                }
+            });
+        }
+    }
+
+    function startEditTags() {
+
+        document.getElementById("tag-edit").src = "../img/done.svg";
+        document.getElementById("tag-edit").onclick = finishEditTags;
+        document.getElementById("tags").innerHTML = `<div class="tag-bg tag-unselected" >Fetching all tags...</div>&nbsp;&nbsp;`;
+
+        fetchAllTags("tags", true);
+    }
+
+    function finishEditTags() {
+        document.getElementById("tag-edit").src = "../img/edit.svg";
+        document.getElementById("tag-edit").onclick = startEditTags;
+
+        var selectTagIds = getSelectedTagIds();
+        $.ajax({
+            crossDomain: true,
+            url: "http://localhost:8880/action",
+            data: {type: "modify-video-tag", video_id: videoId, tag_ids: selectTagIds.join(",")},
+            method: "GET",
+            dataType: "json",
+            success: function (data) {
+                if (data.code == 0 && data.data != null && data.data.length != 0) {
+                    if (data.data == null || data.data.length == 0) return;
+
+                    var tagsDiv = "";
+                    for (var i = 0; i < data.data.length; i++) {
+                        var selectClass = "tag-unselected";
+                        for (var j = 0; j < tagIds.length; j++) {
+                            if (data.data[i].id == tagIds[j]) {
+                                selectClass = "tag-selected";
+                                break;
+                            }
+                        }
+                        tagsDiv = tagsDiv + `<div class="tag-bg ` + selectClass + `" id="tag-${data.data[i].id}" onclick="switchTag(${data.data[i].id})">${data.data[i].name} (${data.data[i].count})</div>&nbsp;&nbsp;`;
+                    }
+                    document.getElementById("tags").innerHTML = tagsDiv;
+                }
+            }
+        });
+        // 更新视图显示
+        tagNames = [];
+        tagIds = [];
+        for (var i = 0; i < selectTagIds.length; i++) {
+            var tagId = parseInt(selectTagIds[i]);
+            for (var j = 0; j < tagList.length; j++) {
+                if (tagId == tagList[j].id) {
+                    tagNames[tagNames.length] = tagList[j].name;
+                    tagIds[tagIds.length] = tagList[j].id;
+                    break;
+                }
+            }
+        }
+        updateVideoTags();
+
+    }
+
+    function resetEditTags() {
+        try {
+            document.getElementById("tag-edit").src = "../img/edit.svg";
+            document.getElementById("tag-edit").onclick = startEditTags;
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    function playVideoResumeOrPause() {
+        var player = document.getElementById("player");
+        if (player.paused) {
+            player.play();
+        } else {
+            player.pause();
+        }
+    }
+
+    function playVideoFullScreenEnterOrExit() {
+        var player = document.getElementById("player");
+        if (document.webkitIsFullScreen) {
+            player.webkitExitFullscreen();
+        } else {
+            player.webkitRequestFullscreen();
+        }
+    }
+
+</script>
+
+<table align="center" width="1200px" border="0px">
+    <tr>
+        <td valign="top">
+            <div id="video-name" class='tag-title' style="display: inline-block; width: 888px; max-lines: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; height: 1.2em"></div>
+            <br />
+
+            <div id="player-container" style="background-color: #111111; display: inline-block; margin-bottom: 12px;">
+                <video id='player' ref='video' autoplay style='width: 900px; height: 594px' controls>not support</video>
+            </div>
+        </td>
+        <td width="250px" valign="top">
+            <div class='tag-title' style="height: 1.2em">&nbsp;&nbsp;PLAY LIST&nbsp;&nbsp;<img id="play-clear" src="../img/delete.svg" onclick="clearPlayList()" style="width:14px; cursor: pointer"></div>
+            <div id="play-list" class="play-list-container" style="height: 600px;" ></div>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="2">
+            <!--<div class='tag-title'>&nbsp;&nbsp;INFORMATION&nbsp;&nbsp;<img id="delete" src="../img/delete.svg" style="width: 14px; cursor: pointer" onclick="deleteVideo()"></div>-->
+            <!--<div id="video-information"></div>-->
+
+            <div class='tag-title'><span style="margin-right: 10px" id="tab-tags"></span><span style="margin-right: 10px" id="tab-libs"></span><span style="margin-right: 10px" id="tab-high"></span><span id="tab-more"></span></div>
+            <div id="tags" style="margin-bottom: 16px"></div>
+            <div id="lib-tags" style="margin-bottom: 16px"></div>
+            <div id="video-list" style="margin-bottom: 16px"></div>
+            <div id="high-range-add" style="margin-bottom: 16px"></div>
+            <div id="high-range-list" style="margin-bottom: 16px"></div>
+            <div id="more-options" style="margin-bottom: 16px"></div>
+        </td>
+    </tr>
+</table>
+
+<script>
+
+    var videoList = JSON.parse(window.localStorage.getItem("play_video_list"));
+    var tagList = null;
+    var tagNames = [];
+    var tagIds = [];
+    var highRanges = [];
+    var videoId = 0;
+    var playHistory = [];
+    var playHistoryIndex = -1;
+
+    var markHighRangeStartMs = -1;
+    var markHighRangeEndMs = -1;
+
+    showVideoList(null);
+    clickTabIndex(0);
+    {
+        var videoId = parseInt(window.localStorage.getItem("play_video_id"));
+        for (var i = 0; i < videoList.length; i++) {
+            if (videoList[i].id == videoId) {
+                playIndexVideo(i);
+                break;
+            }
+        }
+
+        var player = document.getElementById("player");
+        player.addEventListener('ended', function() {
+            playNextVideo();
+        });
+    }
+
+    document.onkeydown = function() {
+
+        if (event.keyCode == 32) {
+            if (document.activeElement.id != "player") {
+                playVideoResumeOrPause();
+                event.keyCode = 0;
+                event.returnValue = false;
+            } else {
+                // ignore
+            }
+        } else if (event.keyCode == 13) {
+            playVideoFullScreenEnterOrExit();
+            event.keyCode = 0;
+            event.returnValue = false;
+        } else if (event.keyCode == 40) {
+            // play next
+            playNextVideo();
+            event.keyCode = 0;
+            event.returnValue = false;
+        } else if (event.keyCode == 38) {
+            // play prior
+            playPriorVideo();
+            event.keyCode = 0;
+            event.returnValue = false;
+        } else if (event.keyCode == 39) {
+            // ->
+            playForward(true);
+            event.keyCode = 0;
+            event.returnValue = false;
+        } else if (event.keyCode == 37) {
+            // <-
+            playBackward(true);
+            event.keyCode = 0;
+            event.returnValue = false;
+        }
+    };
+
+    document.onkeyup = function () {
+        if (event.keyCode == 39) {
+            // ->
+            playForward(false);
+            event.keyCode = 0;
+            event.returnValue = false;
+        } else if (event.keyCode == 37) {
+            // <-
+            playBackward(false);
+            event.keyCode = 0;
+            event.returnValue = false;
+        }
+    };
+</script>
+</body>
+</html>

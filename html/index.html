@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en" style="font-size: 10px; font-family: Roboto, Arial, sans-serif; background-color: #FAFAFA">
+<head>
+    <meta charset="UTF-8">
+    <title>V-Browser</title>
+    <script src="../js/jquery-3.3.1.js"></script>
+    <script src="../js/common.js"></script>
+</head>
+
+<link rel="stylesheet" type="text/css" href="../css/index.css">
+
+<script>
+
+    var videoList = null;
+    var tagList = null;
+    var pageNumber = 0;
+    var videoSortType = "sort_type_view_count";
+    var videoTagType = "tag_type_and";
+
+    function playVideo(videoId) {
+        window.localStorage.setItem("play_video_id", "" + videoId);
+        window.localStorage.setItem("play_video_list", JSON.stringify(videoList));
+        window.open("player.html");
+    }
+
+    function showSearchBtn() {
+        document.getElementById("search-btn").style.display = "block";
+        document.getElementById("loading-view").style.display = "none";
+    }
+
+    function hideSearchBtn() {
+        document.getElementById("search-btn").style.display = "none";
+        document.getElementById("loading-view").style.display = "block";
+    }
+
+    function loadTags() {
+        $.ajax({
+            crossDomain: true,
+            url: "http://localhost:8880/information",
+            data: {type: "tag-list"},
+            method: "GET",
+            dataType: "json",
+            success: function (data) {
+                if (data.code == 0 && data.data != null && data.data.length != 0) {
+                    tagList = data.data;
+                    showTags();
+                }
+            }
+        });
+    }
+
+    function pageDown() {
+        if (pageNumber == 0) {
+            return;
+        }
+
+        pageNumber--;
+        loadVideos();
+    }
+
+    function pageUp() {
+        if (videoList.length < 60) {
+            return;
+        }
+
+        pageNumber++;
+        loadVideos();
+    }
+    
+    function loadVideos() {
+        hideSearchBtn();
+        var startQueryTime = new Date().getTime();
+        var keyword = document.getElementById('keyword').value;
+        var tagIds = getSelectedTagIds();
+        var queryType = "";
+        switch (videoTagType) {
+            case "tag_type_and":
+                queryType = "and";
+                break;
+
+            case "tag_type_or":
+                queryType = "or";
+                break;
+
+            case "tag_type_none":
+                queryType = "none";
+                break;
+        }
+
+        $.ajax({
+            crossDomain: true,
+            url: "http://localhost:8880/information",
+            data: {keyword: keyword, tag_ids: tagIds, type: "video-list", page_number: pageNumber, query_type: queryType},
+            method: "GET",
+            dataType: "json",
+            success: function (data) {
+                if (data.code == 0) {
+                    if (data.data == null || data.data.length == 0) {
+                        videoList = []
+                    } else {
+                        videoList = data.data;
+                    }
+                    showVideos();
+                }
+
+                var endQueryTime = new Date().getTime();
+                console.log(endQueryTime - startQueryTime);
+                if (endQueryTime - startQueryTime < 3000) {
+                    setTimeout(showSearchBtn, 3000 - (endQueryTime - startQueryTime));
+                } else {
+                    showSearchBtn()
+                }
+            }
+        });
+    }
+
+    function genVideoItem(object) {
+        var isHd = ``;
+        var durationStr = genDurationStr(object.duration_ms);
+        var resolution = object.width + "x" + object.height
+        if (object.width >= 480 && object.height >= 480) {
+            isHd = `<b><i>HD</i></b>&ensp;`;
+        }
+
+        var url = `javascript: playVideo(${object.id})`;
+
+
+        var video =
+
+            // <div class="v-desc">
+            //     <span class="icon-resolution"/>&ensp;${resolution}&ensp;&ensp;<span class="icon-view"/>&ensp;${object.view_count}&ensp;&ensp;
+            // </div>
+            //
+            // <div class="v-title">
+            //     ${object.title}
+            // </div>
+            `<a href="${url}" style="text-decoration: none" onmouseenter="loadImage('${object.md5}', '${object.gif}')" onmouseleave="loadImage('${object.md5}', '${object.jpg}')">
+                <div class="v-item">
+                    <div class="v-container">
+                        <img src="${object.jpg}" class="v-thumbnail" id="${object.md5}" style="object-fit: ${getThumbnailFitType(object.width, object.height)}; background: ${getThumbnailBackground(object.width, object.height)};" />
+                        <span class="v-duration"><b>${isHd}${durationStr}</b></span>
+                    </div>
+                </div>
+             </a>`
+        return video;
+    }
+
+    function genTagItem(object) {
+
+        if (object.mark_star) {
+            return `
+                <div class="tag-bg tag-unselected" id="tag-${object.id}" onclick="selectTag('${object.id}')"><img src="../img/star_checked.svg" style="width: 14px; margin-right: 6px"/>${object.name} (${object.count})</div>
+            `;
+        } else {
+            return `
+                <div class="tag-bg tag-unselected" id="tag-${object.id}" onclick="selectTag('${object.id}')">${object.name} (${object.count})</div>
+            `;
+        }
+    }
+
+    function genTagItemWithDelete(id, name) {
+        var tagDiv =  `
+            <span style="border-radius: 16px; height: 16px; background-color: #F44336; padding: 4px 4px 4px 8px; color: #FFF; display: inline-block; margin: 2px" >${name}<img src="../img/tag-delete.svg" style="width: 14px; cursor: pointer; vertical-align: text-bottom; margin-left: 2px" onclick="selectTag('${id}')"></span>
+        `;
+        return tagDiv;
+    }
+
+    function getSelectedTagIds() {
+        if (tagList == null || tagList.length == 0) return "";
+        var tagIds = "";
+        for (var i = 0; i < tagList.length; i++) {
+            if ($("#tag-" + tagList[i]["id"]).hasClass("tag-selected")) {
+                tagIds = tagIds + "," + tagList[i]["id"];
+            }
+        }
+
+        return tagIds;
+    }
+
+    function showVideos() {
+        if (videoList == null) {
+            videoList = []
+        }
+
+        var tmp;
+        for (var i = 0; i < videoList.length; i++) {
+            for (var j = i + 1; j < videoList.length; j++) {
+                var needSwap = false;
+                switch (videoSortType) {
+                    case "sort_type_view_count":
+                        needSwap = videoList[i].view_count < videoList[j].view_count;
+                        break;
+
+                    case "sort_type_modify_time":
+                        needSwap = videoList[i].modify_time < videoList[j].modify_time;
+                        break;
+
+                    case "sort_type_resolution":
+                        needSwap = videoList[i].width * videoList[i].height < videoList[j].width * videoList[j].height;
+                        break;
+
+                    case "sort_type_duration_desc":
+                        needSwap = videoList[i].duration_ms < videoList[j].duration_ms;
+                        break;
+
+                    case "sort_type_duration_asc":
+                        needSwap = videoList[i].duration_ms > videoList[j].duration_ms;
+                        break;
+                }
+                if (needSwap) {
+                    tmp = videoList[i];
+                    videoList[i] = videoList[j];
+                    videoList[j] = tmp;
+                }
+            }
+        }
+
+
+        var videosDiv = "";
+        for (var i = 0; i < videoList.length; i++) {
+            console.log(videoList[i]);
+            videosDiv = videosDiv + genVideoItem(videoList[i]);
+        }
+        document.getElementById("videos").innerHTML = videosDiv;
+        showNoteMessage();
+    }
+
+    function showNoteMessage() {
+        var loadedTagIds = getSelectedTagIds().split(",");
+
+        var noteMessageHtml = "Select <b style='color: #F44336;'>" + videoList.length + "</b> Videos";
+        switch (videoTagType) {
+            case "tag_type_and":
+                noteMessageHtml = "Select Tags Intersection (<b style='color: #F44336;'>" + videoList.length + "</b> Videos)";
+                break;
+
+            case "tag_type_or":
+                noteMessageHtml = "Select Tags Union (<b style='color: #F44336;'>" + videoList.length + "</b> Videos)";
+                break;
+
+            case "tag_type_none":
+                noteMessageHtml = "Select No Tag (<b style='color: #F44336;'>" + videoList.length + "</b> Videos)";
+                break;
+        }
+
+        for (var i = 0; i < loadedTagIds.length; i++) {
+            if (loadedTagIds[i] == "") {
+                continue;
+            }
+
+            for (var j = 0; j < tagList.length; j++) {
+                if (loadedTagIds[i] == tagList[j].id) {
+                    noteMessageHtml += genTagItemWithDelete(tagList[j].id, tagList[j].name);
+                }
+            }
+        }
+        document.getElementById("note-message").innerHTML = noteMessageHtml;
+    }
+
+    function showTags() {
+        if (tagList == null || tagList.length == 0) return;
+
+        var tagsDiv = "";
+        for (var i = 0; i < tagList.length; i++) {
+            console.log(tagList[i]);
+            tagsDiv = tagsDiv + genTagItem(tagList[i]);
+        }
+        document.getElementById("tags").innerHTML = tagsDiv;
+    }
+
+    function selectTag(tagId) {
+        var tag = $("#tag-" + tagId);
+        if (tag.hasClass("tag-selected")) {
+            tag.removeClass("tag-selected");
+            tag.addClass("tag-unselected");
+        } else {
+            tag.removeClass("tag-unselected");
+            tag.addClass("tag-selected");
+        }
+        pageNumber = 0;
+        loadVideos();
+    }
+
+    function selectSortType(selectedVideoSortType) {
+        //sort_type_view_count sort_type_modify_time sort_type_resolution
+        toggleSortTypeMenuGroup();
+
+        var videoSortTypeHtml =
+            `&nbsp;&nbsp;SORTED BY
+            <br />
+            &nbsp;&nbsp;<font size="0.8em">$</font>`;
+
+        videoSortType = selectedVideoSortType;
+        switch (videoSortType) {
+            case "sort_type_view_count":
+                videoSortTypeHtml = videoSortTypeHtml.replace("$", "View Count DESC");
+                break;
+            case "sort_type_modify_time":
+                videoSortTypeHtml = videoSortTypeHtml.replace("$", "Modified Time DESC");
+                break;
+            case "sort_type_resolution":
+                videoSortTypeHtml = videoSortTypeHtml.replace("$", "Video Resolution DESC");
+                break;
+            case "sort_type_duration_asc":
+                videoSortTypeHtml = videoSortTypeHtml.replace("$", "Video Duration ASC");
+                break;
+            case "sort_type_duration_desc":
+                videoSortTypeHtml = videoSortTypeHtml.replace("$", "Video Duration DESC");
+                break;
+        }
+
+        document.getElementById("video-sort-type").innerHTML = videoSortTypeHtml;
+        showVideos();
+    }
+    
+    function selectTagType(selectedVideoTagType) {
+        toggleTagTypeMenuGroup();
+
+        if (selectedVideoTagType == videoTagType) {
+            return;
+        }
+
+        var videoTagTypeHtml =
+            `&nbsp;&nbsp;TAGS
+            <br />
+            &nbsp;&nbsp;<font size="0.8em">$</font>`;
+
+        videoTagType = selectedVideoTagType;
+
+        switch (videoTagType) {
+            case "tag_type_and":
+                videoTagTypeHtml = videoTagTypeHtml.replace("$", "Query Tag with \"AND\"");
+                break;
+
+            case "tag_type_or":
+                videoTagTypeHtml = videoTagTypeHtml.replace("$", "Query Tag with \"OR\"");
+                break;
+
+            case "tag_type_none":
+                videoTagTypeHtml = videoTagTypeHtml.replace("$", "Query Tag with \"NONE\"");
+                break;
+        }
+
+        document.getElementById("video-tag-type").innerHTML = videoTagTypeHtml;
+        loadVideos();
+    }
+
+    function toggleMenuGroup(id) {
+        document.getElementById(id).classList.toggle('expand');
+        if (document.getElementById(id).classList.contains('expand')) {
+            document.getElementById(id).style.overflow = 'visible'
+        } else {
+            document.getElementById(id).style.overflow = 'hidden'
+        }
+    }
+
+    function toggleSortTypeMenuGroup() {
+        toggleMenuGroup("sort-type-menu-group")
+    }
+
+    function toggleTagTypeMenuGroup() {
+        toggleMenuGroup("tag-type-menu-group")
+    }
+
+</script>
+<body style="overflow-y: scroll">
+<div style="display: block; text-align: -webkit-center; width: 100%; background: #FAFAFA">
+
+    <div style="position: absolute; left: 40px; top: 20px">
+        <span class="nav-title" onclick="window.open('./management.html');">标签管理</span>
+        <span class="nav-title" onclick="window.open('./management.html');">资源管理</span>
+        <span class="nav-title" onclick="window.open('./images.html');">图集</span>
+    </div>
+    <img src="../img/logo.png" width="160px" height="80px" style="cursor: pointer">
+    <div class="search-bg">
+        <input type="text" id="keyword" class="search-input" placeholder="Input video's title or tag..." maxlength="64">
+        <div id="search-btn" class="search-btn" onclick="pageNumber = 0; loadVideos()"><span class="icon-search"/></div>
+        <div style="display: block" id="loading-view">
+            <div class="loading-circle-1"></div>
+            <div class="loading-circle-2"></div>
+            <div class="loading-circle-3"></div>
+            <div class="loading-circle-4"></div>
+        </div>
+        <div hidden id="load-finish"></div>
+    </div>
+
+    <div style="position: relative; bottom: 0; width: 100%; height: 1px; background-color: #EAEAEA"></div>
+</div>
+
+<table align="center" width="90%" border="0px">
+    <tr>
+        <td valign="top" width="180px">
+
+            <div id="video-sort-type" class='tag-title' style="margin-top: 20px; cursor: pointer" onclick="toggleSortTypeMenuGroup()">
+                &nbsp;&nbsp;SORTED BY
+                <br />
+                &nbsp;&nbsp;<font size="0.8em">View Count DESC</font>
+            </div>
+
+            <div id="sort-type-menu-group" class="menu-group">
+                <div class="menu-item" onclick="selectSortType('sort_type_view_count')">↓ Viewed count️</div>
+                <div class="menu-item" onclick="selectSortType('sort_type_modify_time')">↓ Modified time</div>
+                <div class="menu-item" onclick="selectSortType('sort_type_resolution')">↓ Resolution</div>
+                <div class="menu-item" onclick="selectSortType('sort_type_duration_asc')">↑ Video duration</div>
+                <div class="menu-item" onclick="selectSortType('sort_type_duration_desc')">↓ Video duration</div>
+            </div>
+
+            <div id="video-tag-type" class='tag-title' style="cursor: pointer;" onclick="toggleTagTypeMenuGroup()">
+                &nbsp;&nbsp;TAGS
+                <br />
+                &nbsp;&nbsp;<font size="0.8em">Query Tags Intersection</font>
+            </div>
+
+            <div id="tag-type-menu-group" class="menu-group">
+                <div class="menu-item" onclick="selectTagType('tag_type_and')">Query Tags Intersection</div>
+                <div class="menu-item" onclick="selectTagType('tag_type_or')">Query Tags Union</div>
+                <div class="menu-item" onclick="selectTagType('tag_type_none')">Query Has No Tag</div>
+            </div>
+
+            <div id="tags" style="margin-top: 10px"></div>
+        </td>
+
+        <td valign="top">
+            <div id="videos" style="margin-top: 20px; margin-left: 20px">
+                <div style="text-align: -webkit-center; margin-top: 100px"><span class="icon-empty"/></div>
+            </div>
+        </td>
+    </tr>
+</table>
+
+<img src="../img/page-up.svg" style="width: 40px; position: fixed; bottom: 30px; right: 30px; cursor: pointer" onclick="window.scrollTo(0, 0)">
+
+
+<div style="position: fixed; bottom: 10px; left: 0px; right: 0px; margin: auto; display: inline-block; width: 720px;
+    padding: 10px 12px 10px 12px; border-radius: 6px; background-color: #efefef; font-size: 1.4rem; opacity: 0.7; text-align: center"
+    id="note-message">
+
+    <b>Loading...</b>
+
+</div>
+
+<script>
+    loadTags();
+    loadVideos();
+</script>
+</body>
+</html>

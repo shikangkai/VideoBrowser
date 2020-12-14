@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" style="font-size: 10px; font-family: Roboto, Arial, sans-serif; background-color: #FAFAFA">
+<head>
+    <meta charset="UTF-8">
+    <title>V-Browser</title>
+    <script src="../js/jquery-3.3.1.js"></script>
+    <script src="../js/common.js"></script>
+</head>
+
+<link rel="stylesheet" type="text/css" href="../css/index.css">
+<script>
+    function toggleMarkStar(tagId) {
+
+        var id = "tag-mark-star-" + tagId;
+        var isMarkStar = document.getElementById(id).src.endsWith("star_checked.svg");
+        $.ajax({
+            crossDomain: true,
+            url: "http://localhost:8880/action",
+            data: {type: "mark-star-tag", tag_id: tagId, mark: isMarkStar ? "0" : "1"},
+            method: "GET",
+            dataType: "json",
+            success: function (data) {
+                if (data.code == 0) {
+                    if (isMarkStar) {
+                        document.getElementById(id).src = "../img/star_unchecked.svg";
+                    } else {
+                        document.getElementById(id).src = "../img/star_checked.svg";
+                    }
+                }
+            }
+        });
+    }
+    function deleteTag(tagId, tagName) {
+        if (confirm("Delete tag \"" + tagName + "\" ?")) {
+
+            $.ajax({
+                crossDomain: true,
+                url: "http://localhost:8880/action",
+                data: {type: "delete-tag", tag_id: tagId},
+                method: "GET",
+                dataType: "json",
+                success: function (data) {
+                    if (data.code == 0) {
+                        listTags();
+                    }
+                }
+            });
+        }
+    }
+    
+    function addTag() {
+        var tagName = prompt("Input tag name below, ");
+        if (tagName != null && tagName != "") {
+
+            $.ajax({
+                crossDomain: true,
+                url: "http://localhost:8880/action",
+                data: {type: "create-tag", tag_name: tagName, tag_desc: ""},
+                method: "GET",
+                dataType: "json",
+                success: function (data) {
+                    if (data.code == 0) {
+                        listTags();
+                    }
+                }
+            });
+        }
+    }
+
+    function editTag(tagId, tagName, tagDesc) {
+        var tagName = prompt("Modify tag name \"" + tagName + "\", please input below, ", tagName);
+        if (tagName != null && tagName != "") {
+
+            $.ajax({
+                crossDomain: true,
+                url: "http://localhost:8880/action",
+                data: {type: "modify-tag", tag_id: tagId, tag_name: tagName},
+                method: "GET",
+                dataType: "json",
+                success: function (data) {
+                    if (data.code == 0) {
+                        listTags();
+                    }
+                }
+            });
+        }
+    }
+
+    function listTags() {
+
+        $.ajax({
+            crossDomain: true,
+            url: "http://localhost:8880/information",
+            data: {type: "tag-list"},
+            method: "GET",
+            dataType: "json",
+            success: function (data) {
+                if (data.code == 0) {
+                    tagList = data.data;
+
+                    var tagsDiv = "<div id=\"tags\" style=\"display: block\"><div class=\"tag-bg tag-selected\" onclick='addTag()'>+ Add tag</div></div>";
+                    for (var i = 0; i < tagList.length; i++) {
+                        tagsDiv = tagsDiv + `
+                            <span style="display: inline-block">
+                                <span class="tag-bg tag-unselected">${tagList[i].name} (${tagList[i].count})</span>&nbsp;&nbsp;&nbsp;&nbsp;
+                                <img id="tag-mark-star-${tagList[i].id}" src="${tagList[i].mark_star == 1 ? "../img/star_checked.svg" : "../img/star_unchecked.svg"}" style="width: 16px; cursor: pointer; margin-right: 6px" onclick="toggleMarkStar(${tagList[i].id})" />
+                                <img src="../img/delete.svg" style="width: 16px; cursor: pointer; margin-right: 6px" onclick="deleteTag(${tagList[i].id}, '${tagList[i].name}')">
+                                <img src="../img/edit.svg" style="width: 16px; cursor: pointer; margin-right: 12px" onclick="editTag(${tagList[i].id}, '${tagList[i].name}', '${tagList[i].desc}')">
+                            </span>`;
+                    }
+                    document.getElementById("tags").innerHTML = tagsDiv;
+                }
+            }
+        });
+    }
+</script>
+<body style="overflow-y: scroll">
+
+<table align="center" width="90%" border="0px">
+    <tr>
+        <td>
+            <div class='tag-title'>&nbsp;&nbsp;SAVED TAGS</div>
+            <div id="tags" style="display: block"><div class="tag-bg tag-selected" onclick='addTag()'>+ Add tag</div></div>
+
+            <div class='tag-title'>&nbsp;&nbsp;RUN SCRIPTS</div>
+            <div style="display: inline-block"><div class="tag-bg tag-unselected">Parse Local Videos</div></div>
+        </td>
+    </tr>
+</table>
+</body>
+<script>
+    var tagList = [];
+    listTags();
+
+    shell("echo")
+</script>
+</html>
