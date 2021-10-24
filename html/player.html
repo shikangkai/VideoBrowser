@@ -14,6 +14,7 @@
     var isPlayHighMode = false;
     var isPlayContinueMode = true;
     var isPlayRandomMode = false;
+    var isLockPlayList = false;
 
     function switchPlayHighMode() {
         isPlayHighMode = !isPlayHighMode;
@@ -63,16 +64,61 @@
         }
     }
 
+    function switchLockPlayListMode() {
+        isLockPlayList = !isLockPlayList;
+        updateLockPlayListMode();
+    }
+
+    function updateLockPlayListMode() {
+        var div = $("#lock-play-list");
+        if (isLockPlayList) {
+            div.addClass("tag-selected");
+            div.removeClass("tag-unselected");
+        } else {
+            div.addClass("tag-unselected");
+            div.removeClass("tag-selected");
+        }
+    }
+
+    function switchTabPlaySettings() {
+
+        document.getElementById("tab-play-list").src = "../img/list-unchecked.svg";
+        document.getElementById("tab-play-settings").src = "../img/settings-checked.svg";
+
+        document.getElementById("play-list").innerHTML = `
+                <span id="play-high" class="tag-bg" onclick="switchPlayHighMode()">Play From HIGH</span>
+                <span id="play-continue" class="tag-bg" onclick="switchPlayContinueMode()">Play Continue</span>
+                <span id="play-random" class="tag-bg" onclick="switchPlayRandomMode()">Play Randomly</span>
+                <span id="lock-play-list" class="tag-bg" onclick="switchLockPlayListMode()">Lock Play List</span>
+        `;
+        updatePlayHighMode();
+        updatePlayContinueMode();
+        updatePlayRandomMode();
+        updateLockPlayListMode();
+    }
+
+    function switchTabPlayList() {
+        document.getElementById("tab-play-list").src = "../img/list-checked.svg";
+        document.getElementById("tab-play-settings").src = "../img/settings-unchecked.svg";
+        showPlayList(true);
+    }
+
     function isTabShow(index) {
         switch (index) {
             case 0:
-                return !document.getElementById("tab-tags").innerHTML.includes('bbb');
+                return !document.getElementById("tab-info").innerHTML.includes('bbb');
 
             case 1:
-                return !document.getElementById("tab-libs").innerHTML.includes('bbb');
+                return !document.getElementById("tab-tags").innerHTML.includes('bbb');
 
             case 2:
+                return !document.getElementById("tab-libs").innerHTML.includes('bbb');
+
+            case 3:
                 return !document.getElementById("tab-high").innerHTML.includes('bbb');
+
+            case 4:
+                return !document.getElementById("tab-more").innerHTML.includes('bbb');
 
         }
 
@@ -82,43 +128,60 @@
 
     function clickTabIndex(index) {
 
-        document.getElementById("tab-tags").innerHTML = `<span style="color: #bbb; cursor: pointer" onclick="clickTabIndex(0)">&nbsp;&nbsp;TAGS&nbsp;&nbsp;</span>`;
-        document.getElementById("tab-libs").innerHTML = `<span style="color: #bbb; cursor: pointer" onclick="clickTabIndex(1)">&nbsp;&nbsp;LIBS&nbsp;&nbsp;</span>`;
-        document.getElementById("tab-high").innerHTML = `<span style="color: #bbb; cursor: pointer" onclick="clickTabIndex(2)">&nbsp;&nbsp;HIGH&nbsp;&nbsp;</span>`;
-        document.getElementById("tab-more").innerHTML = `<span style="color: #bbb; cursor: pointer" onclick="clickTabIndex(3)">&nbsp;&nbsp;MORE&nbsp;&nbsp;</span>`;
+        document.getElementById("tab-info").innerHTML = `<span style="color: #bbb; cursor: pointer" onclick="clickTabIndex(0)">INFO</span>`;
+        document.getElementById("tab-tags").innerHTML = `<span style="color: #bbb; cursor: pointer" onclick="clickTabIndex(1)">TAGS</span>`;
+        document.getElementById("tab-libs").innerHTML = `<span style="color: #bbb; cursor: pointer" onclick="clickTabIndex(2)">LIBS</span>`;
+        document.getElementById("tab-high").innerHTML = `<span style="color: #bbb; cursor: pointer" onclick="clickTabIndex(3)">HIGH</span>`;
+        document.getElementById("tab-more").innerHTML = `<span style="color: #bbb; cursor: pointer" onclick="clickTabIndex(4)">MORE</span>`;
 
-        document.getElementById("tags").innerHTML = ``;
-        document.getElementById("lib-tags").innerHTML = ``;
+        document.getElementById("tag-list").innerHTML = ``;
         document.getElementById("video-list").innerHTML = ``;
         document.getElementById("high-range-add").innerHTML = ``;
         document.getElementById("high-range-list").innerHTML = ``;
         document.getElementById("more-options").innerHTML = ``;
+        document.getElementById("video-info").innerHTML = ``;
+
         switch (index) {
             case 0:
-                document.getElementById("tab-tags").innerHTML =
-                    `<span>&nbsp;&nbsp;TAGS&nbsp;&nbsp;</span><img id="tag-edit" src="../img/edit.svg" style="width: 14px; cursor: pointer" onclick="startEditTags()">`;
-                updateVideoTags();
+                document.getElementById("tab-info").innerHTML = `<span>INFO</span>`;
+                updateVideoInfo();
                 break;
 
             case 1:
-                document.getElementById("tab-libs").innerHTML =
-                    `<span>&nbsp;&nbsp;LIBS&nbsp;&nbsp;</span><img id="lib-tag-mode" src="../img/expand.svg" onclick="switchLibTagMode()" style="width:14px; cursor: pointer">&nbsp;&nbsp;<span id="libs-name"></span>`;
-                showVideoList(null);
+                document.getElementById("tab-tags").innerHTML = `<span>TAGS</span>`;
+                updateVideoTags();
                 break;
 
             case 2:
-                document.getElementById("tab-high").innerHTML =
-                `<span>&nbsp;&nbsp;HIGH&nbsp;&nbsp;</span><img id="high-range-edit" src="../img/add.svg" onclick="startAddHighRange()" style="width:14px; cursor: pointer">`;
-                updateVideoHighRange();
+                document.getElementById("tab-libs").innerHTML = `<span>LIBS</span>`;
+                showVideoList(null);
                 break;
 
             case 3:
-                document.getElementById("tab-more").innerHTML =
-                    `<span>&nbsp;&nbsp;MORE&nbsp;&nbsp;</span>`;
-                showMoreOptions();
+                document.getElementById("tab-high").innerHTML = `<span>HIGH</span>`;
+                updateVideoHighRange();
+                break;
+
+            case 4:
+                document.getElementById("tab-more").innerHTML = `<span>MORE</span>`;
+                updateMoreOptions();
                 break;
         }
 
+
+
+    }
+
+    function moveToTrash() {
+        if (confirm("Move video \"" + playHistory[playHistoryIndex].title + "\" to trash ?")) {
+            deleteVideo(playHistory[playHistoryIndex].id, 1);
+        }
+    }
+
+    function restoreFromTrash() {
+        if (confirm("Restore video \"" + playHistory[playHistoryIndex].title + "\" from trash ?")) {
+            deleteVideo(playHistory[playHistoryIndex].id, 0);
+        }
     }
 
     function deleteHighRange(id, videoId) {
@@ -140,9 +203,16 @@
     }
 
     function updateVideoHighRange() {
-        if (!isTabShow(2)) {
+        if (!isTabShow(3)) {
             return;
         }
+
+        document.getElementById("tab-options").innerHTML = `
+                <div class="tag-bg tag-selected" id="option-high-range-edit" onclick="startAddHighRange()">
+                    <img id="icon-high-range-edit" src="../img/add.svg" style="width: 14px">
+                    <span id="text-high-range-edit" style="margin-left: 10px">Add</span>
+                </div>
+                `;
 
         var highRangesDiv = "";
         if (highRanges.length > 0) {
@@ -151,7 +221,7 @@
                 var left = 900 * highRanges[i].start_ms / total;
                 var width = 900 * (highRanges[i].end_ms - highRanges[i].start_ms) / total;
                 highRangesDiv += `
-            <div style="position: relative; left: 0; top: 0; height: 20px">
+            <div style="position: relative; left: 0; top: 0; height: 20px; margin-top: 5px; margin-bottom: 5px">
                 <img style="position: absolute; left: 920px; top: 3px; width: 14px; height: 14px; cursor: pointer" onclick="deleteHighRange(${highRanges[i].id}, ${highRanges[i].video_id})" src="../img/delete.svg">
                 <span style="position: absolute; left: 0; top: 5px; width: 900px; height: 10px; border-radius: 4px; background-color: #efefef; cursor: pointer" onclick="seekVideoTo(${highRanges[i].start_ms})" />
                 <span style="position: absolute; left: ${left}px; top: 0px; width: ${width}px; height: 10px; border-radius: 4px; background-color: #F44336" />
@@ -159,7 +229,7 @@
             `;
             }
         } else {
-            highRangesDiv = `<div style="font-size: 1.4em; text-align: -webkit-center;"><span class="icon-empty" /><br />High Ranges 列表为空</div>`;
+            highRangesDiv = `<div class="tag-bg tag-selected" style="margin-right: 3px" >No High Ranges</div>`;
         }
 
         document.getElementById("high-range-list").innerHTML = highRangesDiv;
@@ -169,8 +239,9 @@
         markHighRangeStartMs = -1;
         markHighRangeEndMs = -1;
         try {
-            document.getElementById("high-range-edit").src = "../img/add.svg";
-            document.getElementById("high-range-edit").onclick = startAddHighRange;
+            document.getElementById("icon-high-range-edit").src = "../img/add.svg";
+            document.getElementById("text-high-range-edit").innerHTML = "Add";
+            document.getElementById("option-high-range-edit").onclick = startAddHighRange;
             document.getElementById("high-range-add").innerHTML = ``;
         } catch (e) {
             console.log(e);
@@ -230,7 +301,7 @@
         }
 
         var div = `
-            <div style="position: relative; left: 0; top: 0; height: 40px">
+            <div style="position: relative; left: 0; top: 0; height: 40px; margin-bottom: 10px">
                 <span class="tag-bg" style="position: absolute; left: 912px; top: 0; width: 56px; height: 20px" onclick="markHighRangeStart()">标记开始</span>
                 <span class="tag-bg" style="position: absolute; left: 998px; top: 0; width: 56px; height: 20px" onclick="markHighRangeEnd()">标记结束</span>
                 <span class="tag-bg" style="position: absolute; left: 1084px; top: 0; width: 56px; height: 20px" onclick="cancelMarkHighRange()">取消标记</span>
@@ -243,8 +314,9 @@
     
     function startAddHighRange() {
 
-        document.getElementById("high-range-edit").src = "../img/done.svg";
-        document.getElementById("high-range-edit").onclick = finishAddHighRange;
+        document.getElementById("icon-high-range-edit").src = "../img/done.svg";
+        document.getElementById("text-high-range-edit").innerHTML = "Finish";
+        document.getElementById("option-high-range-edit").onclick = finishAddHighRange;
         updateAddHighRange();
 
     }
@@ -279,25 +351,24 @@
         resetHighRange();
     }
 
-    function showMoreOptions() {
-        document.getElementById("more-options").innerHTML = `
-                <span id="play-high" class="tag-bg" onclick="switchPlayHighMode()">Play From HIGH</span>
-                <span id="play-continue" class="tag-bg" onclick="switchPlayContinueMode()">Play Continue</span>
-                <span id="play-random" class="tag-bg" onclick="switchPlayRandomMode()">Play Randomly</span>
-        `;
-        updatePlayHighMode();
-        updatePlayContinueMode();
-        updatePlayRandomMode();
+    function updateMoreOptions() {
+        if (!isTabShow(4)) {
+            return;
+        }
+
+        document.getElementById("tab-options").innerHTML = `<div class="tag-bg tag-selected">No Settings</div>`;
     }
 
     function switchLibTagMode() {
-        var libTagMode = document.getElementById("lib-tag-mode");
-        if (libTagMode.src.endsWith("/expand.svg")) {
-            libTagMode.src = "../img/unexpand.svg";
-            fetchAllTags("lib-tags", false)
+        var iconLibMode = document.getElementById("icon-lib-mode");
+        if (iconLibMode.src.endsWith("/expand.svg")) {
+            iconLibMode.src = "../img/unexpand.svg";
+            document.getElementById("text-lib-mode").innerHTML = "Fold Tags"
+            fetchAllTags(false)
         } else {
-            libTagMode.src = "../img/expand.svg";
-            document.getElementById("lib-tags").innerHTML = "";
+            iconLibMode.src = "../img/expand.svg";
+            document.getElementById("text-lib-mode").innerHTML = "Expand Tags"
+            document.getElementById("tag-list").innerHTML = "";
         }
     }
 
@@ -337,10 +408,17 @@
                 }
             }
         }
-        showPlayList();
+        showPlayList(true);
     }
 
-    function showPlayList() {
+    function showPlayList(notScroll) {
+
+        // check
+        if (!document.getElementById("tab-play-list").src.endsWith("list-checked.svg")) {
+            return;
+        }
+
+        var originalTop = document.getElementById("play-list").scrollTop;
 
         if (playHistory.length > 0) {
             var videosDiv = "";
@@ -350,15 +428,50 @@
             document.getElementById("play-list").innerHTML = videosDiv;
             document.getElementById("video-list-index-" + playHistoryIndex).innerHTML = `<img class="current-play" src="../img/playing.png" style="height: 30px; width: 30px; padding-top: 41px; padding-bottom: 41px; padding-left: 95px; padding-right: 95px; background-color: rgba(0, 0, 0, 0.7);">`;
         } else {
-            document.getElementById("play-list").innerHTML = `<div style="font-size: 1.4em; text-align: -webkit-center;"><span class="icon-empty" /><br />播放列表为空</div>`;
+            // document.getElementById("play-list").innerHTML = `<div style="font-size: 1.4em; text-align: -webkit-center;"><span class="icon-empty" /><br />播放列表为空</div>`;
         }
 
-        document.getElementById("play-list").scrollTop = playHistoryIndex * 122;
+        if (notScroll) {
+            document.getElementById("play-list").scrollTop = originalTop;
+            return
+        }
+
+        var videoHeight = 112;
+        var videoMargin = 10;
+
+        var currentVideoY = playHistoryIndex * (videoHeight + videoMargin);
+
+        var minY = document.getElementById("play-list").scrollTop;
+        var maxY = document.getElementById("play-list").scrollTop + document.getElementById("play-list").clientHeight;
+
+        if (currentVideoY < minY) {
+            document.getElementById("play-list").scrollTop = currentVideoY;
+        } else if (currentVideoY > maxY) {
+            document.getElementById("play-list").scrollTop = currentVideoY + videoHeight - document.getElementById("play-list").clientHeight;
+        }
     }
 
     function showVideoList(tagName) {
-        if (!isTabShow(1)) {
+        if (!isTabShow(2)) {
             return;
+        }
+
+        if (tagName == null) {
+            document.getElementById("tab-options").innerHTML = `
+                <div class="tag-bg tag-selected" id="option-lib-mode" onclick="switchLibTagMode()">
+                    <img id="icon-lib-mode" src="../img/expand.svg" style="width: 14px">
+                    <span id="text-lib-mode" style="margin-left: 10px">Expand Tags</span>
+                </div>
+                `;
+        } else {
+            document.getElementById("tab-options").innerHTML = `
+                <div class="tag-bg tag-selected" id="option-lib-mode" onclick="switchLibTagMode()">
+                    <img id="icon-lib-mode" src="../img/expand.svg" style="width: 14px">
+                    <span id="text-lib-mode" style="margin-left: 10px">Expand Tags</span>
+                </div>
+
+                <font style="font-size: 1.4em; line-height: 1.6em; color: #444">Current video list from tag <font style="color: #F44336"><b>${tagName}</b></font></font>
+                `;
         }
 
         var videosDiv = "";
@@ -371,9 +484,7 @@
             videosDiv = `<div style="font-size: 1.4em; text-align: -webkit-center;"><span class="icon-empty" /><br />不存在 Tag 为 <b>${tagName}</b> 视频资源</div>`;
         }
         document.getElementById("video-list").innerHTML = videosDiv;
-        if (tagName != null) {
-            document.getElementById("libs-name").innerHTML = `\"${tagName}\" (${videoList.length})</div>`;
-        }
+        document.getElementById("tag-list").innerHTML = ``;
     }
 
     function queryTagVideoList(tagId, tagName) {
@@ -415,11 +526,19 @@
     }
 
     function updateVideoTags() {
-        if (!isTabShow(0)) {
+        if (!isTabShow(1)) {
             return;
         }
+
+        document.getElementById("tab-options").innerHTML = `
+                <div class="tag-bg tag-selected" id="option-tag-edit" onclick="startEditTags()">
+                    <img id="icon-tag-edit" src="../img/edit.svg" style="width: 14px">
+                    <span id="text-tag-edit" style="margin-left: 10px">Edit</span>
+                </div>
+                `;
+
         if (tagNames == null || tagNames.length == 0) {
-            document.getElementById("tags").innerHTML = `<div class="tag-bg tag-unselected" style="margin-right: 3px" >No tag</div>&nbsp;&nbsp;`;
+            document.getElementById("tag-list").innerHTML = `<div class="tag-bg tag-selected" style="margin-right: 3px" >No Tags</div>`;
             return;
         }
 
@@ -427,7 +546,7 @@
         for (var i = 0; i < tagNames.length; i++) {
             tagsDiv = tagsDiv + `<div class="tag-bg tag-unselected" style="margin-right: 3px" id="tag-${tagIds[i]}" onclick="queryTagVideoList(${tagIds[i]}, '${tagNames[i]}')">${tagNames[i]}</div>&nbsp;&nbsp;`;
         }
-        document.getElementById("tags").innerHTML = tagsDiv;
+        document.getElementById("tag-list").innerHTML = tagsDiv;
     }
 
     function queryVideoInformation(videoId) {
@@ -506,13 +625,18 @@
         // information = information + `<div class="tag-bg tag-unselected" >Update ${getTimeDistanceString(video.modify_time)}</div>&nbsp;&nbsp;`;
         // information = information + `<div class="tag-bg tag-unselected" >Viewed ${video.view_count} time(s)</div>&nbsp;&nbsp;`;
         // document.getElementById("video-information").innerHTML = information;
+        updateVideoInfo();
         resetEditTags();
         resetHighRange();
-        showPlayList();
+        showPlayList(false);
 
     }
 
     function moveUpInPlayList(index) {
+        moveUpInPlayList(index, true);
+    }
+
+    function moveUpInPlayList(index, notScroll) {
         if (index == 0) {
             return;
         }
@@ -526,10 +650,14 @@
         } else if (index - 1 == playHistoryIndex) {
             playHistoryIndex = index;
         }
-        showPlayList();
+        showPlayList(notScroll);
     }
 
     function moveDownInPlayList(index) {
+        moveDownInPlayList(index, true);
+    }
+
+    function moveDownInPlayList(index, notScroll) {
         if (index == playHistory.length - 1) {
             return;
         }
@@ -542,7 +670,7 @@
         } else if (index + 1 == playHistoryIndex) {
             playHistoryIndex = index;
         }
-        showPlayList();
+        showPlayList(notScroll);
     }
 
     function showPlayListOrderController(index) {
@@ -597,49 +725,46 @@
 
         var toPlayVideo;
         if (playHistoryIndex == playHistory.length - 1) {
-            toPlayVideo = videoList[0];
-            // 重新生成
-            if (isPlayRandomMode) {
-                // 生成一个不存在的随机数
-                // 如果videolist全部都在playHistory中，则从第一个开始播放
-                // 否则产生一个不在history中的video id
-
-                var index = 0;
-                var cursor = 0;
-                for (var i = 0; i < 1000; i++) {
-                    cursor += parseInt(Math.random() * videoList.length);
-                    index = cursor % videoList.length;
-                    var includeInHistory = false;
-                    for (var j = 0; j <= playHistoryIndex; j++) {
-                        if (videoList[index].id == playHistory[j].id) {
-                            includeInHistory = true;
+            toPlayVideo = playHistory[0];
+            if (!isLockPlayList) {
+                // 重新生成
+                if (isPlayRandomMode) {
+                    toPlayVideo = videoList[(parseInt(Math.random() * videoList.length) + playHistoryIndex) % videoList.length];
+                } else {
+                    var player = document.getElementById("player");
+                    var src = player.src;
+                    var playIndex = 0;
+                    for (var i = 0; i < videoList.length; i++) {
+                        if (src.endsWith(videoList[i].src)) {
+                            playIndex = i;
+                            break;
                         }
                     }
 
-                    if (!includeInHistory) {
-                        break;
+                    if (playIndex == videoList.length - 1) {
+                        toPlayVideo = videoList[0];
+                    } else {
+                        toPlayVideo = videoList[i + 1];
                     }
                 }
 
-                toPlayVideo = videoList[index];
+
+                // 判断当前视频是否已经存在，若存在则直接播放列表中的视频、
+                var videoExistsInHistory = false;
+                for (var i = 0; i < playHistory.length; i++) {
+                    if (toPlayVideo.id == playHistory[i].id) {
+                        toPlayVideo = playHistory[i];
+                        playHistoryIndex = i;
+                        videoExistsInHistory = true;
+                    }
+                }
+
+                if (!videoExistsInHistory) {
+                    playHistory[++playHistoryIndex] = toPlayVideo;
+                }
             } else {
-                var player = document.getElementById("player");
-                var src = player.src;
-                var playIndex = 0;
-                for (var i = 0; i < videoList.length; i++) {
-                    if (src.endsWith(videoList[i].src)) {
-                        playIndex = i;
-                        break;
-                    }
-                }
-
-                if (playIndex == videoList.length - 1) {
-                    toPlayVideo = videoList[0];
-                } else {
-                    toPlayVideo = videoList[i + 1];
-                }
+                playHistoryIndex = 0;
             }
-            playHistory[++playHistoryIndex] = toPlayVideo;
         } else {
             toPlayVideo = playHistory[++playHistoryIndex];
         }
@@ -652,11 +777,9 @@
         // 播放上一个
 
         if (playHistoryIndex == 0) {
-            // 不做任何操作
+            playVideo(playHistory[playHistoryIndex = playHistory.length - 1]);
         } else {
-            var toPlayVideo;
-            toPlayVideo = playHistory[--playHistoryIndex];
-            playVideo(toPlayVideo);
+            playVideo(playHistory[--playHistoryIndex]);
         }
     }
 
@@ -680,7 +803,7 @@
     function clearPlayList() {
         playHistoryIndex = -1;
         playHistory = [];
-        showPlayList();
+        showPlayList(false);
     }
 
     function switchTag(tagId) {
@@ -702,7 +825,7 @@
         return selectedTagIds;
     }
 
-    function fetchAllTags(id, mark) {
+    function fetchAllTags(mark) {
 
         $.ajax({
             crossDomain: true,
@@ -729,52 +852,47 @@
                             tagsDiv = tagsDiv + `<div class="tag-bg ` + selectClass + `" style="margin-right: 3px" id="tag-${tagList[i].id}" onclick="queryTagVideoList(${tagList[i].id}, '${tagList[i].name}')">${tagList[i].name} (${tagList[i].count})</div>&nbsp;&nbsp;`;
                         }
                     }
-                    document.getElementById(id).innerHTML = tagsDiv;
+                    document.getElementById("tag-list").innerHTML = tagsDiv;
                 }
             }
         });
     }
 
-    function deleteVideo() {
-        var videoIndex;
-        var videoTitle = "";
-        for (var i = 0; i < videoList.length; i++) {
-            if (videoList[i].id == videoId) {
-                videoTitle = videoList[i].title;
-                videoIndex = i;
-                break;
-            }
-        }
-        if (confirm("Confirm delete this video(" + videoTitle + ")?")) {
-            $.ajax({
-                crossDomain: true,
-                url: "http://localhost:8880/action",
-                data: {type: "delete-video", video_id: videoId},
-                method: "GET",
-                dataType: "json",
-                success: function (data) {
-                    if (data.code == 0) {
-                        videoList.splice(videoIndex, 1);
-                        showVideoList(null);
-                        playNextVideo();
+    function deleteVideo(videoId, deleted) {
+        $.ajax({
+            crossDomain: true,
+            url: "http://localhost:8880/action",
+            data: {type: "delete-video", video_id: videoId, deleted: deleted},
+            method: "GET",
+            dataType: "json",
+            success: function (data) {
+                if (data.code == 0) {
+                    for (var i = 0; i < videoList.length; i++) {
+                        if (videoList[i].id == videoId) {
+                            videoList[i].deleted = deleted;
+                            break;
+                        }
                     }
+                    updateVideoInfo();
                 }
-            });
-        }
+            }
+        });
     }
 
     function startEditTags() {
 
-        document.getElementById("tag-edit").src = "../img/done.svg";
-        document.getElementById("tag-edit").onclick = finishEditTags;
-        document.getElementById("tags").innerHTML = `<div class="tag-bg tag-unselected" >Fetching all tags...</div>&nbsp;&nbsp;`;
+        document.getElementById("icon-tag-edit").src = "../img/done.svg";
+        document.getElementById("text-tag-edit").innerHTML = "Finish"
+        document.getElementById("option-tag-edit").onclick = finishEditTags;
+        document.getElementById("tag-list").innerHTML = `<div class="tag-bg tag-unselected" >Fetching all tags...</div>&nbsp;&nbsp;`;
 
-        fetchAllTags("tags", true);
+        fetchAllTags(true);
     }
 
     function finishEditTags() {
-        document.getElementById("tag-edit").src = "../img/edit.svg";
-        document.getElementById("tag-edit").onclick = startEditTags;
+        document.getElementById("icon-tag-edit").src = "../img/edit.svg";
+        document.getElementById("text-tag-edit").innerHTML = "Edit"
+        document.getElementById("option-tag-edit").onclick = startEditTags;
 
         var selectTagIds = getSelectedTagIds();
         $.ajax({
@@ -798,7 +916,7 @@
                         }
                         tagsDiv = tagsDiv + `<div class="tag-bg ` + selectClass + `" id="tag-${data.data[i].id}" onclick="switchTag(${data.data[i].id})">${data.data[i].name} (${data.data[i].count})</div>&nbsp;&nbsp;`;
                     }
-                    document.getElementById("tags").innerHTML = tagsDiv;
+                    document.getElementById("tag-list").innerHTML = tagsDiv;
                 }
             }
         });
@@ -819,10 +937,68 @@
 
     }
 
+    function updateVideoInfo() {
+        if (!isTabShow(0)) {
+            return;
+        }
+
+        if (playHistoryIndex == -1) {
+            return;
+        }
+
+        var videoInfo = playHistory[playHistoryIndex];
+
+        if (videoInfo.deleted == 1) {
+
+            document.getElementById("tab-options").innerHTML = `
+                <div class="tag-bg tag-selected" onclick="restoreFromTrash()">
+                    <img src="../img/delete.svg" style="width: 14px">
+                    &nbsp;&nbsp;Restore
+                </div>
+                `;
+        } else {
+            document.getElementById("tab-options").innerHTML = `
+                <div class="tag-bg tag-selected" onclick="moveToTrash()">
+                    <img src="../img/delete.svg" style="width: 14px">
+                    &nbsp;&nbsp;Delete
+                </div>
+                `;
+        }
+
+        document.getElementById("video-info").innerHTML = `
+            <table style="border-width: 0; font-size: 1.4em; line-height: 1.6em; color: #444">
+                <tr>
+                    <td style="width: 174px"><b>Video Title</b></td>
+                    <td>${videoInfo.title}</td>
+                </tr>
+                <tr>
+                    <td style="width: 174px"><b>Video Resolution</b></td>
+                    <td>${videoInfo.width}×${videoInfo.height}</td>
+                </tr>
+                <tr>
+                    <td><b>Video Duration</b></td>
+                    <td>${genDurationStr(videoInfo.duration_ms)}</td>
+                </tr>
+                <tr>
+                    <td><b>File Size</b></td>
+                    <td>${getFileSizeStr(videoInfo.size_byte)}</td>
+                </tr>
+                <tr>
+                    <td><b>Modify Time</b></td>
+                    <td>${new Date(videoInfo.modify_time)}</td>
+                </tr>
+                <tr>
+                    <td><b>Meta Information</b></td>
+                    <td>${videoInfo.md5} (${videoInfo.id})</td>
+                </tr>
+            </table>
+        `;
+    }
+
     function resetEditTags() {
         try {
-            document.getElementById("tag-edit").src = "../img/edit.svg";
-            document.getElementById("tag-edit").onclick = startEditTags;
+            document.getElementById("icon-tag-edit").src = "../img/edit.svg";
+            document.getElementById("option-tag-edit").onclick = startEditTags;
         } catch (e) {
             console.log(e);
         }
@@ -859,8 +1035,11 @@
             </div>
         </td>
         <td width="250px" valign="top">
-            <div class='tag-title' style="height: 1.2em">&nbsp;&nbsp;PLAY LIST&nbsp;&nbsp;<img id="play-clear" src="../img/delete.svg" onclick="clearPlayList()" style="width:14px; cursor: pointer"></div>
-            <div id="play-list" class="play-list-container" style="height: 600px;" ></div>
+            <div class='tag-title' style="height: 1.2em" >
+                <img id="tab-play-list" src="../img/list-checked.svg" onclick="switchTabPlayList()" style="width:16px; cursor: pointer; position: relative; left: 20px">
+                <img id="tab-play-settings" src="../img/settings-unchecked.svg" onclick="switchTabPlaySettings()" style="width:16px; cursor: pointer; position: relative; left: 30px">
+            </div>
+            <div id="play-list" className="play-list-container" style="height: 600px; overflow: scroll; overflow-y: auto; overflow-x: hidden"></div>
         </td>
     </tr>
     <tr>
@@ -868,13 +1047,14 @@
             <!--<div class='tag-title'>&nbsp;&nbsp;INFORMATION&nbsp;&nbsp;<img id="delete" src="../img/delete.svg" style="width: 14px; cursor: pointer" onclick="deleteVideo()"></div>-->
             <!--<div id="video-information"></div>-->
 
-            <div class='tag-title'><span style="margin-right: 10px" id="tab-tags"></span><span style="margin-right: 10px" id="tab-libs"></span><span style="margin-right: 10px" id="tab-high"></span><span id="tab-more"></span></div>
-            <div id="tags" style="margin-bottom: 16px"></div>
-            <div id="lib-tags" style="margin-bottom: 16px"></div>
-            <div id="video-list" style="margin-bottom: 16px"></div>
-            <div id="high-range-add" style="margin-bottom: 16px"></div>
-            <div id="high-range-list" style="margin-bottom: 16px"></div>
-            <div id="more-options" style="margin-bottom: 16px"></div>
+            <div class='tag-title'><span style="margin-right: 16px; margin-left: 20px" id="tab-info"></span><span style="margin-right: 16px" id="tab-tags"></span><span style="margin-right: 16px" id="tab-libs"></span><span style="margin-right: 16px" id="tab-high"></span><span id="tab-more"></span></div>
+            <div id="tab-options"></div>
+            <div id="video-info"></div>
+            <div id="tag-list"></div>
+            <div id="video-list"></div>
+            <div id="high-range-add"></div>
+            <div id="high-range-list"></div>
+            <div id="more-options"></div>
         </td>
     </tr>
 </table>
@@ -910,6 +1090,7 @@
         });
     }
 
+    var keyCtrlIsHold = false;
     document.onkeydown = function() {
 
         if (event.keyCode == 32) {
@@ -924,14 +1105,12 @@
             playVideoFullScreenEnterOrExit();
             event.keyCode = 0;
             event.returnValue = false;
-        } else if (event.keyCode == 40) {
-            // play next
-            playNextVideo();
+        } else if (event.keyCode == 38) {
+            // do nothing
             event.keyCode = 0;
             event.returnValue = false;
-        } else if (event.keyCode == 38) {
-            // play prior
-            playPriorVideo();
+        } else if (event.keyCode == 40) {
+            // do nothing
             event.keyCode = 0;
             event.returnValue = false;
         } else if (event.keyCode == 39) {
@@ -944,10 +1123,15 @@
             playBackward(true);
             event.keyCode = 0;
             event.returnValue = false;
+        } else if (event.keyCode == 17) {
+            keyCtrlIsHold = true;
+            event.keyCode = 0;
+            event.returnValue = false;
         }
     };
 
     document.onkeyup = function () {
+
         if (event.keyCode == 39) {
             // ->
             playForward(false);
@@ -958,8 +1142,37 @@
             playBackward(false);
             event.keyCode = 0;
             event.returnValue = false;
+        } else if (event.keyCode == 40) {
+            // play next
+            if (keyCtrlIsHold) {
+                moveDownInPlayList(playHistoryIndex, false);
+            } else {
+                playNextVideo();
+            }
+            event.keyCode = 0;
+            event.returnValue = false;
+        } else if (event.keyCode == 38) {
+            // play prior
+            if (keyCtrlIsHold) {
+                moveUpInPlayList(playHistoryIndex, false);
+            } else {
+                playPriorVideo();
+            }
+            event.keyCode = 0;
+            event.returnValue = false;
+        } else if (event.keyCode == 8) {
+            // delete
+            deletePlayListIndex(playHistoryIndex);
+            event.keyCode = 0;
+            event.returnValue = false;
+        } else if (event.keyCode == 17) {
+            keyCtrlIsHold = false;
+            event.keyCode = 0;
+            event.returnValue = false;
         }
     };
+
+    switchTabPlayList();
 </script>
 </body>
 </html>

@@ -14,6 +14,27 @@ function genDurationStr(durationMillis) {
     }
 }
 
+function getFileSizeStr(sizeBytes) {
+
+    var k = sizeBytes >> 10;
+    var m = k >> 10;
+    var g = m >> 10;
+
+    if (g > 0) {
+        return (sizeBytes / 1024 / 1024 / 1024).toFixed(2) + " GB";
+    }
+
+    if (m > 0) {
+        return (sizeBytes / 1024 / 1024).toFixed(2) + " MB";
+    }
+
+    if (k > 0) {
+        return (sizeBytes / 1024).toFixed(2) + " KB";
+    }
+
+    return "Zero Size"
+}
+
 function loadImage(id, src) {
     console.log(id);
     console.log(src);
@@ -45,4 +66,10 @@ function getThumbnailBackground(width, height) {
     } else {
         return "black";
     }
+}
+
+function playVideo(videoId, videoList) {
+    window.localStorage.setItem("play_video_id", "" + videoId);
+    window.localStorage.setItem("play_video_list", JSON.stringify(videoList));
+    window.open("player.html");
 }

@@ -13,14 +13,17 @@
 
     var videoList = null;
     var tagList = null;
-    var pageNumber = 0;
-    var videoSortType = "sort_type_view_count";
-    var videoTagType = "tag_type_and";
+    var fvtTagList = null;
+    var prdTagList = null;
+    var chrTagList = null;
+    var selectedTagIds = new Set()
 
-    function playVideo(videoId) {
-        window.localStorage.setItem("play_video_id", "" + videoId);
-        window.localStorage.setItem("play_video_list", JSON.stringify(videoList));
-        window.open("player.html");
+    var pageNumber = 0;
+    var videoSortType = "sort_type_modify_time";
+    var videoTagType = "tag_type_or";
+
+    function playPageVideo(videoId) {
+        playVideo(videoId, videoList);
     }
 
     function showSearchBtn() {
@@ -43,7 +46,22 @@
             success: function (data) {
                 if (data.code == 0 && data.data != null && data.data.length != 0) {
                     tagList = data.data;
-                    showTags();
+                    fvtTagList = [];
+                    prdTagList = [];
+                    chrTagList = [];
+
+                    for (var i = 0; i < tagList.length; i++) {
+                        if (tagList[i].mark_star == 1) {
+                            fvtTagList[fvtTagList.length] = tagList[i];
+                        } else if (tagList[i].name.startsWith("@")) {
+                            prdTagList[prdTagList.length] = tagList[i];
+                        } else {
+                            chrTagList[chrTagList.length] = tagList[i];
+                        }
+                    }
+
+                    selectedTagIds.clear();
+                    showFvtTags();
                 }
             }
         });
@@ -122,7 +140,7 @@
             isHd = `<b><i>HD</i></b>&ensp;`;
         }
 
-        var url = `javascript: playVideo(${object.id})`;
+        var url = `javascript: playPageVideo(${object.id})`;
 
 
         var video =
@@ -147,14 +165,21 @@
 
     function genTagItem(object) {
 
-        if (object.mark_star) {
+        if (false) {
+        // if (object.mark_star) {
             return `
                 <div class="tag-bg tag-unselected" id="tag-${object.id}" onclick="selectTag('${object.id}')"><img src="../img/star_checked.svg" style="width: 14px; margin-right: 6px"/>${object.name} (${object.count})</div>
             `;
         } else {
-            return `
+            if (selectedTagIds.has("" + object.id)) {
+                return `
+                <div class="tag-bg tag-selected" id="tag-${object.id}" onclick="selectTag('${object.id}')">${object.name} (${object.count})</div>
+            `;
+            } else {
+                return `
                 <div class="tag-bg tag-unselected" id="tag-${object.id}" onclick="selectTag('${object.id}')">${object.name} (${object.count})</div>
             `;
+            }
         }
     }
 
@@ -166,14 +191,10 @@
     }
 
     function getSelectedTagIds() {
-        if (tagList == null || tagList.length == 0) return "";
         var tagIds = "";
-        for (var i = 0; i < tagList.length; i++) {
-            if ($("#tag-" + tagList[i]["id"]).hasClass("tag-selected")) {
-                tagIds = tagIds + "," + tagList[i]["id"];
-            }
-        }
-
+        selectedTagIds.forEach(function (i, v, set) {
+            tagIds = tagIds + "," + v;
+        })
         return tagIds;
     }
 
@@ -192,7 +213,7 @@
                         break;
 
                     case "sort_type_modify_time":
-                        needSwap = videoList[i].modify_time < videoList[j].modify_time;
+                        needSwap = videoList[i].id < videoList[j].id;
                         break;
 
                     case "sort_type_resolution":
@@ -257,40 +278,103 @@
         document.getElementById("note-message").innerHTML = noteMessageHtml;
     }
 
-    function showTags() {
+    function showFvtTags() {
+
+        document.getElementById("div-fvt-tags").innerHTML = "";
+        document.getElementById("div-prd-tags").innerHTML = "";
+        document.getElementById("div-chr-tags").innerHTML = "";
+        document.getElementById("div-settings").innerHTML = "";
+
+
+        document.getElementById("tab-tag-fvt").src = "../img/fvt-checked.svg";
+        document.getElementById("tab-tag-prd").src = "../img/prd-unchecked.svg";
+        document.getElementById("tab-tag-chr").src = "../img/chr-unchecked.svg";
+        document.getElementById("tab-settings").src = "../img/settings-unchecked.svg";
+
         if (tagList == null || tagList.length == 0) return;
 
         var tagsDiv = "";
-        for (var i = 0; i < tagList.length; i++) {
-            console.log(tagList[i]);
-            tagsDiv = tagsDiv + genTagItem(tagList[i]);
+        for (var i = 0; i < fvtTagList.length; i++) {
+            console.log(fvtTagList[i]);
+            tagsDiv = tagsDiv + genTagItem(fvtTagList[i]);
         }
-        document.getElementById("tags").innerHTML = tagsDiv;
+        document.getElementById("div-fvt-tags").innerHTML = tagsDiv;
     }
 
-    function selectTag(tagId) {
-        var tag = $("#tag-" + tagId);
-        if (tag.hasClass("tag-selected")) {
-            tag.removeClass("tag-selected");
-            tag.addClass("tag-unselected");
-        } else {
-            tag.removeClass("tag-unselected");
-            tag.addClass("tag-selected");
+    function showPrdTags() {
+
+        document.getElementById("div-fvt-tags").innerHTML = "";
+        document.getElementById("div-prd-tags").innerHTML = "";
+        document.getElementById("div-chr-tags").innerHTML = "";
+        document.getElementById("div-settings").innerHTML = "";
+
+        document.getElementById("tab-tag-fvt").src = "../img/fvt-unchecked.svg";
+        document.getElementById("tab-tag-prd").src = "../img/prd-checked.svg";
+        document.getElementById("tab-tag-chr").src = "../img/chr-unchecked.svg";
+        document.getElementById("tab-settings").src = "../img/settings-unchecked.svg";
+
+        if (prdTagList == null || prdTagList.length == 0) return;
+
+        var tagsDiv = "";
+        for (var i = 0; i < prdTagList.length; i++) {
+            console.log(prdTagList[i]);
+            tagsDiv = tagsDiv + genTagItem(prdTagList[i]);
         }
-        pageNumber = 0;
-        loadVideos();
+        document.getElementById("div-prd-tags").innerHTML = tagsDiv;
     }
 
-    function selectSortType(selectedVideoSortType) {
-        //sort_type_view_count sort_type_modify_time sort_type_resolution
-        toggleSortTypeMenuGroup();
+    function showChrTags() {
 
-        var videoSortTypeHtml =
-            `&nbsp;&nbsp;SORTED BY
-            <br />
-            &nbsp;&nbsp;<font size="0.8em">$</font>`;
+        document.getElementById("div-fvt-tags").innerHTML = "";
+        document.getElementById("div-prd-tags").innerHTML = "";
+        document.getElementById("div-chr-tags").innerHTML = "";
+        document.getElementById("div-settings").innerHTML = "";
 
-        videoSortType = selectedVideoSortType;
+        document.getElementById("tab-tag-fvt").src = "../img/fvt-unchecked.svg";
+        document.getElementById("tab-tag-prd").src = "../img/prd-unchecked.svg";
+        document.getElementById("tab-tag-chr").src = "../img/chr-checked.svg";
+        document.getElementById("tab-settings").src = "../img/settings-unchecked.svg";
+
+        if (chrTagList == null || chrTagList.length == 0) return;
+
+        var tagsDiv = "";
+        for (var i = 0; i < chrTagList.length; i++) {
+            console.log(chrTagList[i]);
+            tagsDiv = tagsDiv + genTagItem(chrTagList[i]);
+        }
+        document.getElementById("div-chr-tags").innerHTML = tagsDiv;
+    }
+
+    function showSettings() {
+
+        document.getElementById("div-fvt-tags").innerHTML = "";
+        document.getElementById("div-prd-tags").innerHTML = "";
+        document.getElementById("div-chr-tags").innerHTML = "";
+        document.getElementById("div-settings").innerHTML = "";
+
+        document.getElementById("tab-tag-fvt").src = "../img/fvt-unchecked.svg";
+        document.getElementById("tab-tag-prd").src = "../img/prd-unchecked.svg";
+        document.getElementById("tab-tag-chr").src = "../img/chr-unchecked.svg";
+        document.getElementById("tab-settings").src = "../img/settings-checked.svg";
+
+
+
+        var videoSortTypeHtml = `
+        <div id="video-sort-type" class='tag-title'>
+                &nbsp;&nbsp;SORTED BY
+                <br />
+                &nbsp;&nbsp;<font size="0.8em">$</font>
+            </div>
+
+            <div id="sort-type-menu-group" class="menu-group expand" style="overflow: visible">
+                <div class="menu-item" onclick="selectSortType('sort_type_view_count')">↓ Viewed count️</div>
+                <div class="menu-item" onclick="selectSortType('sort_type_modify_time')">↓ Modified time</div>
+                <div class="menu-item" onclick="selectSortType('sort_type_resolution')">↓ Resolution</div>
+                <div class="menu-item" onclick="selectSortType('sort_type_duration_asc')">↑ Video duration</div>
+                <div class="menu-item" onclick="selectSortType('sort_type_duration_desc')">↓ Video duration</div>
+            </div>
+        `;
+
         switch (videoSortType) {
             case "sort_type_view_count":
                 videoSortTypeHtml = videoSortTypeHtml.replace("$", "View Count DESC");
@@ -309,23 +393,19 @@
                 break;
         }
 
-        document.getElementById("video-sort-type").innerHTML = videoSortTypeHtml;
-        showVideos();
-    }
-    
-    function selectTagType(selectedVideoTagType) {
-        toggleTagTypeMenuGroup();
+        var videoTagTypeHtml = `
+            <div id="video-tag-type" class='tag-title'>
+                &nbsp;&nbsp;TAGS
+                <br />
+                &nbsp;&nbsp;<font size="0.8em">$</font>
+            </div>
 
-        if (selectedVideoTagType == videoTagType) {
-            return;
-        }
-
-        var videoTagTypeHtml =
-            `&nbsp;&nbsp;TAGS
-            <br />
-            &nbsp;&nbsp;<font size="0.8em">$</font>`;
-
-        videoTagType = selectedVideoTagType;
+            <div id="tag-type-menu-group" class="menu-group expand" style="overflow: visible">
+                <div class="menu-item" onclick="selectTagType('tag_type_and')">Query Tags Intersection</div>
+                <div class="menu-item" onclick="selectTagType('tag_type_or')">Query Tags Union</div>
+                <div class="menu-item" onclick="selectTagType('tag_type_none')">Query Has No Tag</div>
+            </div>
+        `;
 
         switch (videoTagType) {
             case "tag_type_and":
@@ -341,25 +421,49 @@
                 break;
         }
 
-        document.getElementById("video-tag-type").innerHTML = videoTagTypeHtml;
+
+        document.getElementById("div-settings").innerHTML = videoSortTypeHtml + videoTagTypeHtml;
+    }
+
+    function selectTag(tagId) {
+        var tag = $("#tag-" + tagId);
+        if (!tag.hasClass("tag-selected") && !tag.hasClass("tag-unselected")) {
+            selectedTagIds.delete("" + tagId)
+        } else if (tag.hasClass("tag-selected")) {
+            tag.removeClass("tag-selected");
+            tag.addClass("tag-unselected");
+            selectedTagIds.delete("" + tagId)
+        } else {
+            tag.removeClass("tag-unselected");
+            tag.addClass("tag-selected");
+            selectedTagIds.add("" + tagId)
+        }
+        pageNumber = 0;
         loadVideos();
     }
 
-    function toggleMenuGroup(id) {
-        document.getElementById(id).classList.toggle('expand');
-        if (document.getElementById(id).classList.contains('expand')) {
-            document.getElementById(id).style.overflow = 'visible'
-        } else {
-            document.getElementById(id).style.overflow = 'hidden'
+    function selectSortType(selectedVideoSortType) {
+        //sort_type_view_count sort_type_modify_time sort_type_resolution
+
+        if (selectedVideoSortType == videoSortType) {
+            return
         }
-    }
 
-    function toggleSortTypeMenuGroup() {
-        toggleMenuGroup("sort-type-menu-group")
+        videoSortType = selectedVideoSortType;
+        showSettings();
+        showVideos();
     }
+    
+    function selectTagType(selectedVideoTagType) {
 
-    function toggleTagTypeMenuGroup() {
-        toggleMenuGroup("tag-type-menu-group")
+        if (selectedVideoTagType == videoTagType) {
+            return;
+        }
+
+        videoTagType = selectedVideoTagType;
+
+        showSettings();
+        loadVideos();
     }
 
 </script>
@@ -391,33 +495,18 @@
     <tr>
         <td valign="top" width="180px">
 
-            <div id="video-sort-type" class='tag-title' style="margin-top: 20px; cursor: pointer" onclick="toggleSortTypeMenuGroup()">
-                &nbsp;&nbsp;SORTED BY
-                <br />
-                &nbsp;&nbsp;<font size="0.8em">View Count DESC</font>
-            </div>
+            <div style="margin-top: 20px">
 
-            <div id="sort-type-menu-group" class="menu-group">
-                <div class="menu-item" onclick="selectSortType('sort_type_view_count')">↓ Viewed count️</div>
-                <div class="menu-item" onclick="selectSortType('sort_type_modify_time')">↓ Modified time</div>
-                <div class="menu-item" onclick="selectSortType('sort_type_resolution')">↓ Resolution</div>
-                <div class="menu-item" onclick="selectSortType('sort_type_duration_asc')">↑ Video duration</div>
-                <div class="menu-item" onclick="selectSortType('sort_type_duration_desc')">↓ Video duration</div>
-            </div>
+                <img src="../img/fvt-checked.svg" style="width: 20px; height: 20px; position:relative; left: 25px; cursor: pointer" id="tab-tag-fvt" onclick="showFvtTags()" />
+                <img src="../img/prd-unchecked.svg" style="width: 20px; height: 20px; position:relative; left: 35px; cursor: pointer" id="tab-tag-prd" onclick="showPrdTags()" />
+                <img src="../img/chr-unchecked.svg" style="width: 20px; height: 20px; position:relative; left: 45px; cursor: pointer" id="tab-tag-chr" onclick="showChrTags()"/>
+                <img src="../img/settings-unchecked.svg" style="width: 20px; height: 20px; position:relative; left: 55px; cursor: pointer" id="tab-settings" onclick="showSettings()"/>
 
-            <div id="video-tag-type" class='tag-title' style="cursor: pointer;" onclick="toggleTagTypeMenuGroup()">
-                &nbsp;&nbsp;TAGS
-                <br />
-                &nbsp;&nbsp;<font size="0.8em">Query Tags Intersection</font>
+                <div id="div-fvt-tags" style="margin-top: 10px"></div>
+                <div id="div-prd-tags" style="margin-top: 10px"></div>
+                <div id="div-chr-tags" style="margin-top: 10px"></div>
+                <div id="div-settings" style="margin-top: 10px"></div>
             </div>
-
-            <div id="tag-type-menu-group" class="menu-group">
-                <div class="menu-item" onclick="selectTagType('tag_type_and')">Query Tags Intersection</div>
-                <div class="menu-item" onclick="selectTagType('tag_type_or')">Query Tags Union</div>
-                <div class="menu-item" onclick="selectTagType('tag_type_none')">Query Has No Tag</div>
-            </div>
-
-            <div id="tags" style="margin-top: 10px"></div>
         </td>
 
         <td valign="top">
