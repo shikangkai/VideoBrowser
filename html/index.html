@@ -367,11 +367,11 @@
             </div>
 
             <div id="sort-type-menu-group" class="menu-group expand" style="overflow: visible">
-                <div class="menu-item" onclick="selectSortType('sort_type_view_count')">↓ Viewed count️</div>
-                <div class="menu-item" onclick="selectSortType('sort_type_modify_time')">↓ Modified time</div>
-                <div class="menu-item" onclick="selectSortType('sort_type_resolution')">↓ Resolution</div>
-                <div class="menu-item" onclick="selectSortType('sort_type_duration_asc')">↑ Video duration</div>
-                <div class="menu-item" onclick="selectSortType('sort_type_duration_desc')">↓ Video duration</div>
+                <div class="menu-item" onclick="selectSortType('sort_type_view_count')">🔻 Viewed count️</div>
+                <div class="menu-item" onclick="selectSortType('sort_type_modify_time')">🔻 Modified time</div>
+                <div class="menu-item" onclick="selectSortType('sort_type_resolution')">🔻 Resolution</div>
+                <div class="menu-item" onclick="selectSortType('sort_type_duration_asc')">🔺 Video duration</div>
+                <div class="menu-item" onclick="selectSortType('sort_type_duration_desc')">🔻 Video duration</div>
             </div>
         `;
 
@@ -403,7 +403,7 @@
             <div id="tag-type-menu-group" class="menu-group expand" style="overflow: visible">
                 <div class="menu-item" onclick="selectTagType('tag_type_and')">Query Tags Intersection</div>
                 <div class="menu-item" onclick="selectTagType('tag_type_or')">Query Tags Union</div>
-                <div class="menu-item" onclick="selectTagType('tag_type_none')">Query Has No Tag</div>
+<!--                <div class="menu-item" onclick="selectTagType('tag_type_none')">Query Has No Tag</div>-->
             </div>
         `;
 
@@ -471,9 +471,9 @@
 <div style="display: block; text-align: -webkit-center; width: 100%; background: #FAFAFA">
 
     <div style="position: absolute; left: 40px; top: 20px">
-        <span class="nav-title" onclick="window.open('./management.html');">标签管理</span>
-        <span class="nav-title" onclick="window.open('./management.html');">资源管理</span>
-        <span class="nav-title" onclick="window.open('./images.html');">图集</span>
+        <span class="nav-title" onclick="window.open('./tag-management.html');">标签管理</span>
+        <span class="nav-title" onclick="window.open('./res-management.html');">资源管理</span>
+        <span class="nav-title" onclick="window.open('./img-album-list.html');">图集</span>
     </div>
     <img src="../img/logo.png" width="160px" height="80px" style="cursor: pointer">
     <div class="search-bg">

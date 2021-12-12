@@ -115,65 +115,6 @@
         });
     }
 
-    function listDeletedVideos() {
-
-        $.ajax({
-            crossDomain: true,
-            url: "http://localhost:8880/information",
-            data: {type: "deleted-video-list"},
-            method: "GET",
-            dataType: "json",
-            success: function (data) {
-                if (data.code == 0) {
-                    deletedVideoList = data.data;
-
-                    var deletedVideoDiv = "";
-                    for (var i = 0; i < deletedVideoList.length; i++) {
-                        console.log(deletedVideoList[i]);
-                        deletedVideoDiv = deletedVideoDiv + genVideoItem(deletedVideoList[i]);
-                    }
-                    document.getElementById("deleted-videos").innerHTML = deletedVideoDiv;
-                    document.getElementById("title-deleted-videos").innerHTML = `&nbsp;&nbsp;DELETED VIDEOS (${deletedVideoList.length})`
-                }
-            }
-        });
-    }
-
-    function genVideoItem(object) {
-        var isHd = ``;
-        var durationStr = genDurationStr(object.duration_ms);
-        var resolution = object.width + "x" + object.height
-        if (object.width >= 480 && object.height >= 480) {
-            isHd = `<b><i>HD</i></b>&ensp;`;
-        }
-
-        var url = `javascript: playPageVideo(${object.id})`;
-
-
-        var video =
-
-            // <div class="v-desc">
-            //     <span class="icon-resolution"/>&ensp;${resolution}&ensp;&ensp;<span class="icon-view"/>&ensp;${object.view_count}&ensp;&ensp;
-            // </div>
-            //
-            // <div class="v-title">
-            //     ${object.title}
-            // </div>
-            `<a href="${url}" style="text-decoration: none" onmouseenter="loadImage('${object.md5}', '${object.gif}')" onmouseleave="loadImage('${object.md5}', '${object.jpg}')">
-                <div class="v-item">
-                    <div class="v-container">
-                        <img src="${object.jpg}" class="v-thumbnail" id="${object.md5}" style="object-fit: ${getThumbnailFitType(object.width, object.height)}; background: ${getThumbnailBackground(object.width, object.height)};" />
-                        <span class="v-duration"><b>${isHd}${durationStr}</b></span>
-                    </div>
-                </div>
-             </a>`
-        return video;
-    }
-
-    function playPageVideo(videoId) {
-        playVideo(videoId, deletedVideoList);
-    }
-
 </script>
 <body style="overflow-y: scroll">
 
@@ -185,22 +126,13 @@
 
             <div class='tag-title'>&nbsp;&nbsp;RUN SCRIPTS</div>
             <div style="display: inline-block"><div class="tag-bg tag-unselected">Parse Local Videos</div></div>
-
-
-            <div class='tag-title' id="title-deleted-videos">&nbsp;&nbsp;DELETED VIDEOS</div>
-            <div id="deleted-videos" style="display: block">
-
-
-            </div>
         </td>
     </tr>
 </table>
 </body>
 <script>
     var tagList = [];
-    var deletedVideoList = []
 
     listTags();
-    listDeletedVideos();
 </script>
 </html>

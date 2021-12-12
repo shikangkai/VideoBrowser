@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" style="font-size: 10px; font-family: Roboto, Arial, sans-serif; background-color: #FAFAFA">
+<head>
+    <meta charset="UTF-8">
+    <title>V-Management</title>
+    <script src="../js/jquery-3.3.1.js"></script>
+    <script src="../js/common.js"></script>
+</head>
+
+<link rel="stylesheet" type="text/css" href="../css/index.css">
+<script>
+
+    function listNoTagVideos() {
+
+        $.ajax({
+            crossDomain: true,
+            url: "http://localhost:8880/information",
+            data: {type: "video-list", query_type: "none"},
+            method: "GET",
+            dataType: "json",
+            success: function (data) {
+                if (data.code == 0) {
+                    noTagVideoList = data.data;
+
+                    var noTagVideoDiv = "";
+                    for (var i = 0; i < noTagVideoList.length; i++) {
+                        console.log(noTagVideoList[i]);
+                        noTagVideoDiv = noTagVideoDiv + genVideoItem(noTagVideoList[i], noTagVideoList);
+                    }
+                    document.getElementById("no-tag-videos").innerHTML = noTagVideoDiv;
+                    document.getElementById("title-no-tag-videos").innerHTML = `&nbsp;&nbsp;NO TAG VIDEOS (${noTagVideoList.length})`
+                }
+            }
+        });
+    }
+
+    function listDeletedVideos() {
+
+        $.ajax({
+            crossDomain: true,
+            url: "http://localhost:8880/information",
+            data: {type: "deleted-video-list"},
+            method: "GET",
+            dataType: "json",
+            success: function (data) {
+                if (data.code == 0) {
+                    deletedVideoList = data.data;
+
+                    var deletedVideoDiv = "";
+                    for (var i = 0; i < deletedVideoList.length; i++) {
+                        console.log(deletedVideoList[i]);
+                        deletedVideoDiv = deletedVideoDiv + genVideoItem(deletedVideoList[i], deletedVideoList);
+                    }
+                    document.getElementById("deleted-videos").innerHTML = deletedVideoDiv;
+                    document.getElementById("title-deleted-videos").innerHTML = `&nbsp;&nbsp;DELETED VIDEOS (${deletedVideoList.length})`
+                }
+            }
+        });
+    }
+
+    function genVideoItem(object, videoList) {
+        var isHd = ``;
+        var durationStr = genDurationStr(object.duration_ms);
+        var resolution = object.width + "x" + object.height
+        if (object.width >= 480 && object.height >= 480) {
+            isHd = `<b><i>HD</i></b>&ensp;`;
+        }
+
+        var url;
+        if (videoList == noTagVideoList) {
+            url = `javascript: playNoTagVideo(${object.id})`;
+        } else if (videoList == deletedVideoList) {
+            url = `javascript: playDeletedVideo(${object.id})`;
+        }
+
+        var video =
+
+            // <div class="v-desc">
+            //     <span class="icon-resolution"/>&ensp;${resolution}&ensp;&ensp;<span class="icon-view"/>&ensp;${object.view_count}&ensp;&ensp;
+            // </div>
+            //
+            // <div class="v-title">
+            //     ${object.title}
+            // </div>
+            `<a href="${url}" style="text-decoration: none" onmouseenter="loadImage('${object.md5}', '${object.gif}')" onmouseleave="loadImage('${object.md5}', '${object.jpg}')">
+                <div class="v-item">
+                    <div class="v-container">
+                        <img src="${object.jpg}" class="v-thumbnail" id="${object.md5}" style="object-fit: ${getThumbnailFitType(object.width, object.height)}; background: ${getThumbnailBackground(object.width, object.height)};" />
+                        <span class="v-duration"><b>${isHd}${durationStr}</b></span>
+                    </div>
+                </div>
+             </a>`
+        return video;
+    }
+
+    function playNoTagVideo(videoId) {
+        playVideo(videoId, noTagVideoList);
+    }
+
+    function playDeletedVideo(videoId) {
+        playVideo(videoId, deletedVideoList);
+    }
+
+</script>
+<body style="overflow-y: scroll">
+
+<table align="center" width="90%" border="0px">
+    <tr>
+        <td>
+            <div class='tag-title' id="title-no-tag-videos">&nbsp;&nbsp;NO TAG VIDEOS</div>
+            <div id="no-tag-videos" style="display: block"></div>
+
+            <div class='tag-title' id="title-deleted-videos">&nbsp;&nbsp;DELETED VIDEOS</div>
+            <div id="deleted-videos" style="display: block"></div>
+        </td>
+    </tr>
+</table>
+</body>
+<script>
+    var noTagVideoList = []
+    var deletedVideoList = []
+
+    listNoTagVideos();
+    listDeletedVideos();
+</script>
+</html>
