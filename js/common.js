@@ -73,3 +73,42 @@ function playVideo(videoId, videoList) {
     window.localStorage.setItem("play_video_list", JSON.stringify(videoList));
     window.open("player.html");
 }
+
+var LOAD_PAGE_FUNCTION = [];
+function loadPageByKey(key, page) {
+    LOAD_PAGE_FUNCTION[key](page);
+}
+
+function getPageControllerDiv(totalCount, countPerPage, loadPageFunction, currentPageNumber, key) {
+
+    LOAD_PAGE_FUNCTION[key] = loadPageFunction;
+
+    var totalPageCount = Math.ceil(totalCount / countPerPage);
+    if (totalPageCount <= 1) {
+        return "";
+    }
+
+
+    var startPageNumber = currentPageNumber - 5 < 0 ? 0 : currentPageNumber - 5;
+    var endPageNumber = startPageNumber + 10 >= totalPageCount ? totalPageCount : startPageNumber + 10;
+    startPageNumber = endPageNumber - 10 >= 0 ? endPageNumber - 10 : 0;
+
+    var div = "";
+    if (currentPageNumber > 0) {
+        div += `<div class="page-number-unselected" id="page-controller-previous" onclick="loadPageByKey('${key}', ${currentPageNumber - 1})">前一页</div>`;
+    }
+
+    for (var i = startPageNumber; i < endPageNumber; i++) {
+        if (currentPageNumber == i) {
+            div += `<div class="page-number-selected" id="page-controller-${i}" onclick="loadPageByKey('${key}', ${i})">${i + 1}</div>`;
+        } else {
+            div += `<div class="page-number-unselected" id="page-controller-${i}" onclick="loadPageByKey('${key}', ${i})">${i + 1}</div>`;
+        }
+    }
+
+    if (currentPageNumber < totalPageCount - 1) {
+        div += `<div class="page-number-unselected" id="page-controller-next" onclick="loadPageByKey('${key}', ${currentPageNumber + 1})">后一页</div>`;
+    }
+
+    return div;
+}

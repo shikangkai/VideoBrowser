@@ -11,6 +11,8 @@
 
 <script>
 
+    var RELATIVE_PATH_PREFIX = "../../";
+    var COUNT_PER_PAGE = 60;
     var videoList = null;
     var tagList = null;
     var fvtTagList = null;
@@ -18,7 +20,7 @@
     var chrTagList = null;
     var selectedTagIds = new Set()
 
-    var pageNumber = 0;
+    var currentPageNumber = 0;
     var videoSortType = "sort_type_modify_time";
     var videoTagType = "tag_type_or";
 
@@ -68,11 +70,11 @@
     }
 
     function pageDown() {
-        if (pageNumber == 0) {
+        if (currentPageNumber == 0) {
             return;
         }
 
-        pageNumber--;
+        currentPageNumber--;
         loadVideos();
     }
 
@@ -81,8 +83,14 @@
             return;
         }
 
-        pageNumber++;
+        currentPageNumber++;
         loadVideos();
+    }
+
+    function loadVideoPage(pageNumber) {
+        currentPageNumber = pageNumber;
+        showVideos();
+        window.scrollTo(0, 0);
     }
     
     function loadVideos() {
@@ -108,7 +116,7 @@
         $.ajax({
             crossDomain: true,
             url: "http://localhost:8880/information",
-            data: {keyword: keyword, tag_ids: tagIds, type: "video-list", page_number: pageNumber, query_type: queryType},
+            data: {keyword: keyword, tag_ids: tagIds, type: "video-list", page_number: currentPageNumber, query_type: queryType},
             method: "GET",
             dataType: "json",
             success: function (data) {
@@ -118,7 +126,8 @@
                     } else {
                         videoList = data.data;
                     }
-                    showVideos();
+                    sortVideos();
+                    loadVideoPage(0);
                 }
 
                 var endQueryTime = new Date().getTime();
@@ -152,10 +161,10 @@
             // <div class="v-title">
             //     ${object.title}
             // </div>
-            `<a href="${url}" style="text-decoration: none" onmouseenter="loadImage('${object.md5}', '${object.gif}')" onmouseleave="loadImage('${object.md5}', '${object.jpg}')">
+            `<a href="${url}" style="text-decoration: none" onmouseenter="loadImage('${object.md5}', '${RELATIVE_PATH_PREFIX + object.gif}')" onmouseleave="loadImage('${object.md5}', '${RELATIVE_PATH_PREFIX + object.jpg}')">
                 <div class="v-item">
                     <div class="v-container">
-                        <img src="${object.jpg}" class="v-thumbnail" id="${object.md5}" style="object-fit: ${getThumbnailFitType(object.width, object.height)}; background: ${getThumbnailBackground(object.width, object.height)};" />
+                        <img src="${RELATIVE_PATH_PREFIX + object.jpg}" class="v-thumbnail" id="${object.md5}" style="object-fit: ${getThumbnailFitType(object.width, object.height)}; background: ${getThumbnailBackground(object.width, object.height)};" />
                         <span class="v-duration"><b>${isHd}${durationStr}</b></span>
                     </div>
                 </div>
@@ -185,7 +194,7 @@
 
     function genTagItemWithDelete(id, name) {
         var tagDiv =  `
-            <span style="border-radius: 16px; height: 16px; background-color: #F44336; padding: 4px 4px 4px 8px; color: #FFF; display: inline-block; margin: 2px" >${name}<img src="../img/tag-delete.svg" style="width: 14px; cursor: pointer; vertical-align: text-bottom; margin-left: 2px" onclick="selectTag('${id}')"></span>
+            <span style="border-radius: 16px; line-height: 16px; background-color: #F44336; padding: 4px 4px 4px 8px; color: #FFF; display: inline-block; margin: 2px" >${name}<img src="../img/tag-delete.svg" style="width: 14px; cursor: pointer; vertical-align: text-bottom; margin-left: 2px" onclick="selectTag('${id}')"></span>
         `;
         return tagDiv;
     }
@@ -198,11 +207,11 @@
         return tagIds;
     }
 
-    function showVideos() {
+    function sortVideos() {
+
         if (videoList == null) {
             videoList = []
         }
-
         var tmp;
         for (var i = 0; i < videoList.length; i++) {
             for (var j = i + 1; j < videoList.length; j++) {
@@ -235,34 +244,43 @@
                 }
             }
         }
+    }
 
+    function showVideos() {
+        if (videoList == null) {
+            videoList = []
+        }
 
         var videosDiv = "";
-        for (var i = 0; i < videoList.length; i++) {
+        for (var i = COUNT_PER_PAGE * currentPageNumber; i < videoList.length && i < COUNT_PER_PAGE * currentPageNumber + COUNT_PER_PAGE; i++) {
             console.log(videoList[i]);
             videosDiv = videosDiv + genVideoItem(videoList[i]);
         }
         document.getElementById("videos").innerHTML = videosDiv;
+        document.getElementById("videos-page-controller").innerHTML = getPageControllerDiv(videoList.length, COUNT_PER_PAGE, loadVideoPage, currentPageNumber, 'all-videos');
         showNoteMessage();
+
     }
 
     function showNoteMessage() {
         var loadedTagIds = getSelectedTagIds().split(",");
 
-        var noteMessageHtml = "Select <b style='color: #F44336;'>" + videoList.length + "</b> Videos";
+        var selectType = "";
         switch (videoTagType) {
             case "tag_type_and":
-                noteMessageHtml = "Select Tags Intersection (<b style='color: #F44336;'>" + videoList.length + "</b> Videos)";
+                selectType = "Intersection";
                 break;
 
             case "tag_type_or":
-                noteMessageHtml = "Select Tags Union (<b style='color: #F44336;'>" + videoList.length + "</b> Videos)";
+                selectType = "Union";
                 break;
 
             case "tag_type_none":
-                noteMessageHtml = "Select No Tag (<b style='color: #F44336;'>" + videoList.length + "</b> Videos)";
+                noteMessageHtml = "ERROR";
                 break;
         }
+
+        var noteMessageHtml = `Select Tags [${selectType}] (<b style='color: #F44336;'>${videoList.length}</b> Videos <img src='../img/download.svg' style='width: 1.4em; height: 1.4em; vertical-align: middle; cursor: pointer' onclick="batchDownloadSelectedVideos()">)`;
 
         for (var i = 0; i < loadedTagIds.length; i++) {
             if (loadedTagIds[i] == "") {
@@ -276,6 +294,32 @@
             }
         }
         document.getElementById("note-message").innerHTML = noteMessageHtml;
+    }
+
+    function batchDownloadSelectedVideos() {
+        if (confirm("Download " + videoList.length + " videos?")) {
+            for (var i = 0; i < videoList.length; i++) {
+                downloadVideo(RELATIVE_PATH_PREFIX + videoList[i].src, videoList[i].title + ".mp4");
+                //
+                // setTimeout(
+                //     function () {
+                //         download(RELATIVE_PATH_PREFIX + videoList[i].src, videoList[i].title + ".mp4");
+                //     },
+                //     5000 * i
+                // )
+            }
+        }
+    }
+
+    function downloadVideo(link, fileName) {
+        const elt = document.createElement("a");
+        elt.setAttribute("href", link);
+        elt.setAttribute("download", fileName);
+        elt.style.display = "none";
+        elt.rel = 'noopener noreferrer'
+        document.body.appendChild(elt);
+        elt.click();
+        document.body.removeChild(elt);
     }
 
     function showFvtTags() {
@@ -438,7 +482,7 @@
             tag.addClass("tag-selected");
             selectedTagIds.add("" + tagId)
         }
-        pageNumber = 0;
+        currentPageNumber = 0;
         loadVideos();
     }
 
@@ -451,7 +495,8 @@
 
         videoSortType = selectedVideoSortType;
         showSettings();
-        showVideos();
+        sortVideos();
+        loadVideoPage(0);
     }
     
     function selectTagType(selectedVideoTagType) {
@@ -478,7 +523,7 @@
     <img src="../img/logo.png" width="160px" height="80px" style="cursor: pointer">
     <div class="search-bg">
         <input type="text" id="keyword" class="search-input" placeholder="Input video's title or tag..." maxlength="64">
-        <div id="search-btn" class="search-btn" onclick="pageNumber = 0; loadVideos()"><span class="icon-search"/></div>
+        <div id="search-btn" class="search-btn" onclick="currentPageNumber = 0; loadVideos()"><span class="icon-search"/></div>
         <div style="display: block" id="loading-view">
             <div class="loading-circle-1"></div>
             <div class="loading-circle-2"></div>
@@ -510,23 +555,23 @@
         </td>
 
         <td valign="top">
-            <div id="videos" style="margin-top: 20px; margin-left: 20px">
+
+            <div style="position: relative; padding: 10px; font-size: 16px; line-height: 16px; text-align: center; margin-top: 10px" id="note-message">
+
+                <b>Loading...</b>
+
+            </div>
+
+            <div id="videos" style="margin-left: 20px">
                 <div style="text-align: -webkit-center; margin-top: 100px"><span class="icon-empty"/></div>
             </div>
+
+            <div id="videos-page-controller" style="margin-bottom: 10px; margin-left: 20px" align="center"></div>
         </td>
     </tr>
 </table>
 
 <img src="../img/page-up.svg" style="width: 40px; position: fixed; bottom: 30px; right: 30px; cursor: pointer" onclick="window.scrollTo(0, 0)">
-
-
-<div style="position: fixed; bottom: 10px; left: 0px; right: 0px; margin: auto; display: inline-block; width: 720px;
-    padding: 10px 12px 10px 12px; border-radius: 6px; background-color: #efefef; font-size: 1.4rem; opacity: 0.7; text-align: center"
-    id="note-message">
-
-    <b>Loading...</b>
-
-</div>
 
 <script>
     loadTags();

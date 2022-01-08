@@ -10,6 +10,8 @@
 
 <script>
 
+    var RELATIVE_PATH_PREFIX = "../../";
+
     var IMAGE_CELL_TYPE = [
         (1 << 8) + 1,
         (1 << 8) + 2,
@@ -63,8 +65,8 @@
         console.log("genImageMapDiv->" + name);
 
         var imageCellMap = [
-            [false, false, false, false, false, false, false, false, false, false],
-            [false, false, false, false, false, false, false, false, true, true]
+            [false, false, false, false, false, false, false, false, false, false, false, false],
+            [false, false, false, false, false, false, false, false, false, false, true, true]
         ];
 
         var imageIndex = 0;
@@ -98,7 +100,7 @@
         }
 
         div = div + `
-            <span style="width: 200px; height: 95px; object-fit: cover; position: absolute; left: 840px; top: 105px; border-radius: 5px; cursor: pointer; background-color: #333333; color: white; font-size: 5em; text-align: center; line-height: 95px" onclick="gotoAlbum('${name}')">${total - imageIndex}+</span>
+            <span style="width: 200px; height: 95px; object-fit: cover; position: absolute; left: 1050px; top: 105px; border-radius: 5px; cursor: pointer; background-color: #333333; color: white; font-size: 5em; text-align: center; line-height: 95px" onclick="gotoAlbum('${name}')">${total - imageIndex}+</span>
         `;
         return div;
     }
@@ -107,22 +109,22 @@
 
         switch (type) {
             case IMAGE_CELL_TYPE[0]:
-                return `<img style="width: 95px; height: 95px; object-fit: cover; position: absolute; left: ${y * 105}px; top: ${x * 105}px; border-radius: 5px" src="${image}" loading="lazy">`
+                return `<img style="width: 95px; height: 95px; object-fit: cover; position: absolute; left: ${y * 105}px; top: ${x * 105}px; border-radius: 5px" src="${RELATIVE_PATH_PREFIX + image}" loading="lazy">`
 
             case IMAGE_CELL_TYPE[1]:
-                return `<img style="width: 200px; height: 95px; object-fit: cover; position: absolute; left: ${y * 105}px; top: ${x * 105}px; border-radius: 5px" src="${image}" loading="lazy">`
+                return `<img style="width: 200px; height: 95px; object-fit: cover; position: absolute; left: ${y * 105}px; top: ${x * 105}px; border-radius: 5px" src="${RELATIVE_PATH_PREFIX + image}" loading="lazy">`
 
             case IMAGE_CELL_TYPE[2]:
-                return `<img style="width: 95px; height: 200px; object-fit: cover; position: absolute; left: ${y * 105}px; top: ${x * 105}px; border-radius: 5px" src="${image}" loading="lazy">`
+                return `<img style="width: 95px; height: 200px; object-fit: cover; position: absolute; left: ${y * 105}px; top: ${x * 105}px; border-radius: 5px" src="${RELATIVE_PATH_PREFIX + image}" loading="lazy">`
 
             case IMAGE_CELL_TYPE[3]:
-                return `<img style="width: 200px; height: 200px; object-fit: cover; position: absolute; left: ${y * 105}px; top: ${x * 105}px; border-radius: 5px" src="${image}" loading="lazy">`
+                return `<img style="width: 200px; height: 200px; object-fit: cover; position: absolute; left: ${y * 105}px; top: ${x * 105}px; border-radius: 5px" src="${RELATIVE_PATH_PREFIX + image}" loading="lazy">`
 
         }
     }
 
     function getAlbumDiv(index, images, total, name) {
-        return `<div style="display: block; position: absolute; top: ${index * 240 + 120}px;">${genImageMapDiv(images, total, name)}</div>`;
+        return `<div style="display: block; position: relative; top: 20px; height: 240px">${genImageMapDiv(images, total, name)}</div>`;
     }
 
     function gotoAlbum(name) {
@@ -151,13 +153,22 @@
     </tr>
     <tr>
         <td>
-            <div id="album-list"></div>
+            <div id="album-list" style="position: relative;"></div>
+        </td>
+    </tr>
+    <tr>
+        <td align="center">
+            <div style="position: relative;" id="page-controller"></div>
         </td>
     </tr>
 </table>
 </body>
 
 <script>
+
+    var COUNT_PER_PAGE = 5;
+    var albumList = [];
+    var currentPageNumber = 0;
 
     function loadImageAlbums() {
         $.ajax({
@@ -168,31 +179,48 @@
             dataType: "json",
             success: function (data) {
                 if (data.code == 0 && data.data != null) {
-                    updateImageAlbums(data.data.albums)
+                    albumList = data.data.albums;
+                    currentPageNumber = 0;
+                    console.log(albumList)
+                    updateImageAlbums()
                 }
             }
         });
     }
 
-    function updateImageAlbums(albums) {
-        console.log(albums)
+    // function loadPreviousPage() {
+    //     loadPage(currentPageNumber - 1);
+    // }
+    //
+    // function loadNextPage() {
+    //     loadPage(currentPageNumber + 1);
+    // }
+
+    function loadPage(page) {
+        currentPageNumber = page;
+        updateImageAlbums();
+        window.scrollTo(0, 0);
+    }
+
+    function updateImageAlbums() {
 
         var div = "";
-        for (var i = 0; i < albums.length; i++) {
-            div = div + getAlbumDiv(i, albums[i].images, albums[i].count, albums[i].name);
+        for (var i = currentPageNumber * COUNT_PER_PAGE; i < albumList.length && i < currentPageNumber * COUNT_PER_PAGE + COUNT_PER_PAGE; i++) {
+            var imageCount = albumList[i].count;
+            var extension = albumList[i].extension;
+            var baseIndex = albumList[i].base_index;
+
+            var images = [];
+            for (var j = 0; j < 30; j++) {
+                var randomIndex = Math.floor((Math.random() * imageCount));
+                images[images.length] = albumList[i].path + (baseIndex + randomIndex) + "." + extension;
+            }
+
+            div = div + getAlbumDiv(i, images, imageCount, albumList[i].name);
         }
 
-
-        div = div + `
-        <div style="display: block; position: absolute; top: ${albums.length * 240 + 120}px; height: 40px">
-            <div style="width: 1020px; padding: 10px 12px 10px 12px; border-radius: 6px; background-color: #efefef; font-size: 1.4rem; opacity: 0.7; text-align: center">
-
-                <b>No more contents</b>
-
-            </div>
-        </div>`;
-
         document.getElementById("album-list").innerHTML = div;
+        document.getElementById("page-controller").innerHTML = getPageControllerDiv(albumList.length, COUNT_PER_PAGE, loadPage, currentPageNumber, 'album-list');
     }
 </script>
 

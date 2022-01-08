@@ -142,6 +142,34 @@ html {
     font-weight: bold;
 }
 
+.page-number-unselected {
+    display: inline-block;
+    border-radius: 10px;
+    background-color: #efefef;
+    font-size: 15px;
+    line-height: 20px;
+    cursor: pointer;
+    color: #444;
+    padding: 10px 15px 10px 15px;
+    margin: 2px;
+}
+
+.page-number-unselected:hover {
+     background-color: #e0e0e0;
+ }
+
+.page-number-selected {
+    display: inline-block;
+    border-radius: 10px;
+    background-color: #F44336;
+    font-size: 15px;
+    line-height: 20px;
+    cursor: pointer;
+    color: #fff;
+    padding: 10px 15px 10px 15px;
+    margin: 2px;
+}
+
 .play-list-container {
     overflow: auto;
 }

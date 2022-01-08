@@ -11,10 +11,14 @@
 
 <script>
 
+    var RELATIVE_PATH_PREFIX = "../../";
+    var TAG_VIDEO_COUNT_PER_PAGE = 50;
+    var currentTagVideoPageNumber = 0;
     var isPlayHighMode = false;
     var isPlayContinueMode = true;
     var isPlayRandomMode = false;
     var isLockPlayList = false;
+    var videoStepIntervalSecs = 10;
 
     function switchPlayHighMode() {
         isPlayHighMode = !isPlayHighMode;
@@ -136,6 +140,7 @@
 
         document.getElementById("tag-list").innerHTML = ``;
         document.getElementById("video-list").innerHTML = ``;
+        document.getElementById("video-list-page-controller").innerHTML = ``;
         document.getElementById("high-range-add").innerHTML = ``;
         document.getElementById("high-range-list").innerHTML = ``;
         document.getElementById("more-options").innerHTML = ``;
@@ -182,6 +187,18 @@
         if (confirm("Restore video \"" + playHistory[playHistoryIndex].title + "\" from trash ?")) {
             deleteVideo(playHistory[playHistoryIndex].id, 0);
         }
+    }
+
+    function downloadVideo() {
+
+        const elt = document.createElement("a");
+        elt.setAttribute("href", RELATIVE_PATH_PREFIX + playHistory[playHistoryIndex].src);
+        elt.setAttribute("download", playHistory[playHistoryIndex].title + ".mp4");
+        elt.style.display = "none";
+        elt.rel = 'noopener noreferrer'
+        document.body.appendChild(elt);
+        elt.click();
+        document.body.removeChild(elt);
     }
 
     function deleteHighRange(id, videoId) {
@@ -474,16 +491,23 @@
                 `;
         }
 
+        loadPageVideo(0);
+    }
+
+    function loadPageVideo(pageNumber) {
+
+        currentTagVideoPageNumber = pageNumber;
         var videosDiv = "";
 
         if (videoList.length > 0) {
-            for (var i = 0; i < videoList.length; i++) {
+            for (var i = currentTagVideoPageNumber * TAG_VIDEO_COUNT_PER_PAGE; i < videoList.length && i < currentTagVideoPageNumber * TAG_VIDEO_COUNT_PER_PAGE + TAG_VIDEO_COUNT_PER_PAGE; i++) {
                 videosDiv = videosDiv + genVideoLibItem(videoList[i]);
             }
         } else {
             videosDiv = `<div style="font-size: 1.4em; text-align: -webkit-center;"><span class="icon-empty" /><br />不存在 Tag 为 <b>${tagName}</b> 视频资源</div>`;
         }
         document.getElementById("video-list").innerHTML = videosDiv;
+        document.getElementById("video-list-page-controller").innerHTML = getPageControllerDiv(videoList.length, TAG_VIDEO_COUNT_PER_PAGE, loadPageVideo, currentTagVideoPageNumber, "tag-video-list");
         document.getElementById("tag-list").innerHTML = ``;
     }
 
@@ -608,7 +632,7 @@
 
         queryVideoInformation(video.id);
 
-        document.getElementById("player").src = video.src;
+        document.getElementById("player").src = RELATIVE_PATH_PREFIX + video.src;
         document.getElementById("player").volume = 1.0;
         $(".v-cover-title").removeClass("tag-selected");
         $("#title-" + video.id).addClass("tag-selected");
@@ -629,6 +653,15 @@
         resetEditTags();
         resetHighRange();
         showPlayList(false);
+
+        videoStepIntervalSecs = video.duration_ms / 1000 / 50;
+        if (videoStepIntervalSecs < 5) {
+            videoStepIntervalSecs = 5;
+        }
+
+        if (videoStepIntervalSecs > 60) {
+            videoStepIntervalSecs = 60;
+        }
 
     }
 
@@ -690,9 +723,9 @@
         }
 
         var video =
-            `<div class="v-item" style="padding: 0px; margin-bottom: ${index == (playHistory.length - 1) ? 0 : 10 }px; width: 220px; height: 112px;" onmouseenter="javascript: loadImage('${object.md5}', '${object.gif}'); showPlayListOrderController(${index});" onmouseleave="javascript: loadImage('${object.md5}', '${object.jpg}'); hideListOrderController(${index});" >
+            `<div class="v-item" style="padding: 0px; margin-bottom: ${index == (playHistory.length - 1) ? 0 : 10 }px; width: 220px; height: 112px;" onmouseenter="javascript: loadImage('${object.md5}', '${RELATIVE_PATH_PREFIX + object.gif}'); showPlayListOrderController(${index});" onmouseleave="javascript: loadImage('${object.md5}', '${RELATIVE_PATH_PREFIX + object.jpg}'); hideListOrderController(${index});" >
                 <div class="v-container" style="width: 220px; height: 112px;">
-                    <img src="${object.jpg}" class="v-thumbnail" id="${object.md5}" style="width: 220px; height: 112px; object-fit: ${getThumbnailFitType(object.width, object.height)}; background: ${getThumbnailBackground(object.width, object.height)};" onclick="playVideoByHistoryIndex(${index})" />
+                    <img src="${RELATIVE_PATH_PREFIX + object.jpg}" class="v-thumbnail" id="${object.md5}" style="width: 220px; height: 112px; object-fit: ${getThumbnailFitType(object.width, object.height)}; background: ${getThumbnailBackground(object.width, object.height)};" onclick="playVideoByHistoryIndex(${index})" />
                     <span style="position: absolute; left: 0; top: 0;" id="video-list-index-${index}"></span>
                     <span class="v-duration"><b>${isHd}${durationStr}</b></span>
                     <span style="position: absolute; right: 0; top: 0; background-color: rgba(0, 0, 0, 0.7);"><img src="../img/play-delete.svg" style="height: 30px; width: 30px;" onclick="deletePlayListIndex(${index})"></span>
@@ -712,7 +745,7 @@
         var video =
             `<div class="v-item" style="padding: 0px; margin-bottom: 10px; width: 220px; height: 112px; margin-right: 16px">
                 <div class="v-container" style="width: 220px; height: 112px;">
-                    <img src="${object.jpg}" class="v-thumbnail" id="${object.md5}" style="width: 220px; height: 112px; object-fit: ${getThumbnailFitType(object.width, object.height)}; background: ${getThumbnailBackground(object.width, object.height)};" onclick="playVideoById(${object.id})" onmouseenter="loadImage('${object.md5}', '${object.gif}')" onmouseleave="loadImage('${object.md5}', '${object.jpg}')" />
+                    <img src="${RELATIVE_PATH_PREFIX + object.jpg}" class="v-thumbnail" id="${object.md5}" style="width: 220px; height: 112px; object-fit: ${getThumbnailFitType(object.width, object.height)}; background: ${getThumbnailBackground(object.width, object.height)};" onclick="playVideoById(${object.id})" onmouseenter="loadImage('${object.md5}', '${RELATIVE_PATH_PREFIX + object.gif}')" onmouseleave="loadImage('${object.md5}', '${RELATIVE_PATH_PREFIX + object.jpg}')" />
                     <span class="v-duration"><b>${isHd}${durationStr}</b></span>
                 </div>
             </div>`
@@ -735,7 +768,7 @@
                     var src = player.src;
                     var playIndex = 0;
                     for (var i = 0; i < videoList.length; i++) {
-                        if (src.endsWith(videoList[i].src)) {
+                        if (src.indexOf(videoList[i].md5) >= 0) {
                             playIndex = i;
                             break;
                         }
@@ -790,14 +823,14 @@
         playVideo(playHistory[playHistoryIndex]);
     }
 
-    function playForward(slowly) {
+    function playForward() {
         var player = document.getElementById("player");
-        player.currentTime += slowly ? 1.5 : 6;
+        player.currentTime += videoStepIntervalSecs;
     }
 
-    function playBackward(slowly) {
+    function playBackward() {
         var player = document.getElementById("player");
-        player.currentTime -= slowly ? 1.5 : 6;
+        player.currentTime -= videoStepIntervalSecs;
     }
 
     function clearPlayList() {
@@ -955,12 +988,20 @@
                     <img src="../img/delete.svg" style="width: 14px">
                     &nbsp;&nbsp;Restore
                 </div>
+                <div class="tag-bg tag-selected" onclick="downloadVideo()">
+                    <img src="../img/download.svg" style="width: 14px">
+                    &nbsp;&nbsp;Download
+                </div>
                 `;
         } else {
             document.getElementById("tab-options").innerHTML = `
                 <div class="tag-bg tag-selected" onclick="moveToTrash()">
                     <img src="../img/delete.svg" style="width: 14px">
                     &nbsp;&nbsp;Delete
+                </div>
+                <div class="tag-bg tag-selected" onclick="downloadVideo()">
+                    <img src="../img/download.svg" style="width: 14px">
+                    &nbsp;&nbsp;Download
                 </div>
                 `;
         }
@@ -1052,6 +1093,7 @@
             <div id="video-info"></div>
             <div id="tag-list"></div>
             <div id="video-list"></div>
+            <div id="video-list-page-controller" align="center"></div>
             <div id="high-range-add"></div>
             <div id="high-range-list"></div>
             <div id="more-options"></div>
@@ -1115,12 +1157,12 @@
             event.returnValue = false;
         } else if (event.keyCode == 39) {
             // ->
-            playForward(true);
+            playForward();
             event.keyCode = 0;
             event.returnValue = false;
         } else if (event.keyCode == 37) {
             // <-
-            playBackward(true);
+            playBackward();
             event.keyCode = 0;
             event.returnValue = false;
         } else if (event.keyCode == 17) {
@@ -1134,12 +1176,12 @@
 
         if (event.keyCode == 39) {
             // ->
-            playForward(false);
+            // playForward();
             event.keyCode = 0;
             event.returnValue = false;
         } else if (event.keyCode == 37) {
             // <-
-            playBackward(false);
+            // playBackward();
             event.keyCode = 0;
             event.returnValue = false;
         } else if (event.keyCode == 40) {

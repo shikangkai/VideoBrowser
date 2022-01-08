@@ -10,6 +10,12 @@
 <link rel="stylesheet" type="text/css" href="../css/index.css">
 <script>
 
+    var RELATIVE_PATH_PREFIX = "../../";
+    var COUNT_PER_PAGE = 60;
+
+    var currentNoTagVideosPageNumber = 0;
+    var currentDeletedVideosPageNumber = 0;
+
     function listNoTagVideos() {
 
         $.ajax({
@@ -21,17 +27,23 @@
             success: function (data) {
                 if (data.code == 0) {
                     noTagVideoList = data.data;
-
-                    var noTagVideoDiv = "";
-                    for (var i = 0; i < noTagVideoList.length; i++) {
-                        console.log(noTagVideoList[i]);
-                        noTagVideoDiv = noTagVideoDiv + genVideoItem(noTagVideoList[i], noTagVideoList);
-                    }
-                    document.getElementById("no-tag-videos").innerHTML = noTagVideoDiv;
-                    document.getElementById("title-no-tag-videos").innerHTML = `&nbsp;&nbsp;NO TAG VIDEOS (${noTagVideoList.length})`
+                    showNoTagVideos(0);
                 }
             }
         });
+    }
+
+    function showNoTagVideos(pageNumber) {
+
+        currentNoTagVideosPageNumber = pageNumber;
+
+        var noTagVideoDiv = "";
+        for (var i = currentNoTagVideosPageNumber * COUNT_PER_PAGE; i < noTagVideoList.length && i < currentNoTagVideosPageNumber * COUNT_PER_PAGE + COUNT_PER_PAGE; i++) {
+            noTagVideoDiv = noTagVideoDiv + genVideoItem(noTagVideoList[i], noTagVideoList);
+        }
+        document.getElementById("no-tag-videos").innerHTML = noTagVideoDiv;
+        document.getElementById("title-no-tag-videos").innerHTML = `&nbsp;&nbsp;NO TAG VIDEOS (${noTagVideoList.length})`;
+        document.getElementById("no-tag-videos-page-controller").innerHTML = getPageControllerDiv(noTagVideoList.length, COUNT_PER_PAGE, showNoTagVideos, currentNoTagVideosPageNumber, 'no-tag-videos');
     }
 
     function listDeletedVideos() {
@@ -45,17 +57,24 @@
             success: function (data) {
                 if (data.code == 0) {
                     deletedVideoList = data.data;
-
-                    var deletedVideoDiv = "";
-                    for (var i = 0; i < deletedVideoList.length; i++) {
-                        console.log(deletedVideoList[i]);
-                        deletedVideoDiv = deletedVideoDiv + genVideoItem(deletedVideoList[i], deletedVideoList);
-                    }
-                    document.getElementById("deleted-videos").innerHTML = deletedVideoDiv;
-                    document.getElementById("title-deleted-videos").innerHTML = `&nbsp;&nbsp;DELETED VIDEOS (${deletedVideoList.length})`
+                    showDeletedVideos(0);
                 }
             }
         });
+    }
+
+    function showDeletedVideos(pageNumber) {
+
+        currentDeletedVideosPageNumber = pageNumber;
+
+        var deletedVideoDiv = "";
+        for (var i = COUNT_PER_PAGE * currentDeletedVideosPageNumber; i < deletedVideoList.length && i < COUNT_PER_PAGE * currentDeletedVideosPageNumber + COUNT_PER_PAGE; i++) {
+            deletedVideoDiv = deletedVideoDiv + genVideoItem(deletedVideoList[i], deletedVideoList);
+        }
+
+        document.getElementById("deleted-videos").innerHTML = deletedVideoDiv;
+        document.getElementById("title-deleted-videos").innerHTML = `&nbsp;&nbsp;DELETED VIDEOS (${deletedVideoList.length})`
+        document.getElementById("deleted-videos-page-controller").innerHTML = getPageControllerDiv(deletedVideoList.length, COUNT_PER_PAGE, showDeletedVideos, currentDeletedVideosPageNumber, 'deleted-videos');
     }
 
     function genVideoItem(object, videoList) {
@@ -82,10 +101,10 @@
             // <div class="v-title">
             //     ${object.title}
             // </div>
-            `<a href="${url}" style="text-decoration: none" onmouseenter="loadImage('${object.md5}', '${object.gif}')" onmouseleave="loadImage('${object.md5}', '${object.jpg}')">
+            `<a href="${url}" style="text-decoration: none" onmouseenter="loadImage('${object.md5}', '${RELATIVE_PATH_PREFIX + object.gif}')" onmouseleave="loadImage('${object.md5}', '${RELATIVE_PATH_PREFIX + object.jpg}')">
                 <div class="v-item">
                     <div class="v-container">
-                        <img src="${object.jpg}" class="v-thumbnail" id="${object.md5}" style="object-fit: ${getThumbnailFitType(object.width, object.height)}; background: ${getThumbnailBackground(object.width, object.height)};" />
+                        <img src="${RELATIVE_PATH_PREFIX + object.jpg}" class="v-thumbnail" id="${object.md5}" style="object-fit: ${getThumbnailFitType(object.width, object.height)}; background: ${getThumbnailBackground(object.width, object.height)};" />
                         <span class="v-duration"><b>${isHd}${durationStr}</b></span>
                     </div>
                 </div>
@@ -109,9 +128,11 @@
         <td>
             <div class='tag-title' id="title-no-tag-videos">&nbsp;&nbsp;NO TAG VIDEOS</div>
             <div id="no-tag-videos" style="display: block"></div>
+            <div id="no-tag-videos-page-controller" style="display: block" align="center"></div>
 
             <div class='tag-title' id="title-deleted-videos">&nbsp;&nbsp;DELETED VIDEOS</div>
             <div id="deleted-videos" style="display: block"></div>
+            <div id="deleted-videos-page-controller" style="display: block" align="center"></div>
         </td>
     </tr>
 </table>

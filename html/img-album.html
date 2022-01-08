@@ -38,7 +38,10 @@
 
 <script>
 
+    var RELATIVE_PATH_PREFIX = "../../";
+
     var imageList = [];
+    var imageThumbnailList = [];
     var imageAlbumName;
     var imagePreviewIndex = -1;
     var IMAGE_COLUMN = 10;
@@ -53,38 +56,57 @@
             success: function (data) {
                 if (data.code == 0 && data.data != null) {
                     console.log(data);
-                    imageList = data.data.images;
                     imageAlbumName = data.data.name;
+                    {
+                        imageList = [];
+                        imageThumbnailList = [];
 
-                    updateAlbumImageList(data.data.name, data.data.images);
+                        var extension = data.data.extension;
+                        for (var i = 0; i < data.data.count; i++) {
+                            imageList[imageList.length] = data.data.path + (data.data.base_index + i) + "." + extension;
+                            imageThumbnailList[imageThumbnailList.length] = data.data.thumbnail_path + (data.data.base_index + i) + "." + extension;
+                        }
+                    }
+
+                    updateAlbumImageList();
                 }
             }
         });
     }
 
-    function updateAlbumImageList(name, images) {
-        console.log("name=" + name);
-        console.log("images=" + images)
+    function updateAlbumImageList() {
 
         var div = ``;
-        for (var i = 0; i < images.length; i++) {
+        for (var i = 0; i < imageThumbnailList.length; i++) {
             div = div + `
-            <img src="${images[i].replace('Picture-Src', 'Picture-Thumbnail')}" style="height: 116px; width: 116px; object-fit: cover; cursor: pointer; border-radius: 4px; position: absolute; left: ${120 * (i % 10)}px; top: ${120 * Math.floor(i / 10)}px" onclick="showImage(${i})" />
+            <img src="${RELATIVE_PATH_PREFIX + imageThumbnailList[i]}" style="height: 116px; width: 116px; object-fit: cover; cursor: pointer; border-radius: 4px; position: absolute; left: ${120 * (i % IMAGE_COLUMN)}px; top: ${120 * Math.floor(i / IMAGE_COLUMN)}px" onclick="showImage(${i})" />
             `;
         }
+
+        var i = imageList.length;
+        div = div + `<img src="../img/playing.png" style="background: hsla(0, 0%, 10%, 0.8); height: 116px; width: 116px; object-fit: none; cursor: pointer; border-radius: 4px; position: absolute; left: ${120 * (i % IMAGE_COLUMN)}px; top: ${120 * Math.floor(i / IMAGE_COLUMN)}px; visibility: hidden" id="peview-img-cover" />`;
 
         document.getElementById("album-image-list").innerHTML = div;
     }
 
     function dismissImagePreview() {
         document.getElementById("image-preview-container").innerHTML = ``;
+        document.getElementById("peview-img-cover").style.visibility = "hidden";
     }
 
     function showImagePreview() {
         console.log(imagePreviewIndex);
         document.getElementById("image-preview-container").innerHTML = `
-        <img style="width: ${window.innerWidth}px; height: ${window.innerHeight}px; object-fit: contain; background: hsla(0, 0%, 10%, 0.8)" src="${imageList[imagePreviewIndex]}" onclick="dismissImagePreview()" />
+        <img style="width: ${window.innerWidth}px; height: ${window.innerHeight}px; object-fit: contain; background: hsla(0, 0%, 10%, 0.8)" src="${RELATIVE_PATH_PREFIX + imageList[imagePreviewIndex]}" onclick="dismissImagePreview()" />
+        <div style="position: fixed; right: 16px; bottom: 16px; font-size: 2em; text-align: center" class="tag-unselected tag-bg">${imagePreviewIndex + 1} / ${imageList.length}</div>
         `;
+
+        var previewImgCover = document.getElementById("peview-img-cover");
+        previewImgCover.style.visibility = "visible";
+        previewImgCover.style.left = (120 * (imagePreviewIndex % IMAGE_COLUMN)) + "px";
+        previewImgCover.style.top = (120 * Math.floor(imagePreviewIndex / IMAGE_COLUMN)) + "px";
+
+        window.scrollTo(0, 120 * Math.floor(imagePreviewIndex / IMAGE_COLUMN));
     }
 
     function showImage(index) {
@@ -163,10 +185,16 @@
             // previewUp();
             event.keyCode = 0;
             event.returnValue = false;
+        } else if (event.keyCode == 27) {
+            // esc
+            event.keyCode = 0;
+            event.returnValue = false;
         }
     };
 
     document.onkeyup = function () {
+
+        console.log("keycode=" + event.keyCode);
 
         if (event.keyCode == 39) {
             // ->
@@ -188,6 +216,9 @@
             previewUp();
             event.keyCode = 0;
             event.returnValue = false;
+        } else if (event.keyCode == 27) {
+            // esc
+            dismissImagePreview();
         }
     };
 
