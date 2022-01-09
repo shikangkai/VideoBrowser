@@ -48,6 +48,7 @@
             success: function (data) {
                 if (data.code == 0 && data.data != null && data.data.length != 0) {
                     tagList = data.data;
+                    console.log(tagList);
                     fvtTagList = [];
                     prdTagList = [];
                     chrTagList = [];
@@ -131,7 +132,6 @@
                 }
 
                 var endQueryTime = new Date().getTime();
-                console.log(endQueryTime - startQueryTime);
                 if (endQueryTime - startQueryTime < 3000) {
                     setTimeout(showSearchBtn, 3000 - (endQueryTime - startQueryTime));
                 } else {
@@ -177,16 +177,16 @@
         if (false) {
         // if (object.mark_star) {
             return `
-                <div class="tag-bg tag-unselected" id="tag-${object.id}" onclick="selectTag('${object.id}')"><img src="../img/star_checked.svg" style="width: 14px; margin-right: 6px"/>${object.name} (${object.count})</div>
+                <div class="tag-bg tag-unselected" id="tag-${object.id}" onclick="selectTag('${object.id}')" title="${object.title}"><img src="../img/star_checked.svg" style="width: 14px; margin-right: 6px"/>${object.name} (${object.count})</div>
             `;
         } else {
             if (selectedTagIds.has("" + object.id)) {
                 return `
-                <div class="tag-bg tag-selected" id="tag-${object.id}" onclick="selectTag('${object.id}')">${object.name} (${object.count})</div>
+                <div class="tag-bg tag-selected" id="tag-${object.id}" onclick="selectTag('${object.id}')" title="${object.title}">${object.name} (${object.count})</div>
             `;
             } else {
                 return `
-                <div class="tag-bg tag-unselected" id="tag-${object.id}" onclick="selectTag('${object.id}')">${object.name} (${object.count})</div>
+                <div class="tag-bg tag-unselected" id="tag-${object.id}" onclick="selectTag('${object.id}')" title="${object.title}">${object.name} (${object.count})</div>
             `;
             }
         }
@@ -253,7 +253,6 @@
 
         var videosDiv = "";
         for (var i = COUNT_PER_PAGE * currentPageNumber; i < videoList.length && i < COUNT_PER_PAGE * currentPageNumber + COUNT_PER_PAGE; i++) {
-            console.log(videoList[i]);
             videosDiv = videosDiv + genVideoItem(videoList[i]);
         }
         document.getElementById("videos").innerHTML = videosDiv;

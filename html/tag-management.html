@@ -11,8 +11,14 @@
 <script>
     function toggleMarkStar(tagId) {
 
-        var id = "tag-mark-star-" + tagId;
-        var isMarkStar = document.getElementById(id).src.endsWith("star_checked.svg");
+        var isMarkStar = false;
+        for (var i = 0; i < tagList.length; i++) {
+            if (tagId == tagList[i].id) {
+                isMarkStar = tagList[i].mark_star == 1;
+                break;
+            }
+        }
+
         $.ajax({
             crossDomain: true,
             url: "http://localhost:8880/action",
@@ -21,15 +27,12 @@
             dataType: "json",
             success: function (data) {
                 if (data.code == 0) {
-                    if (isMarkStar) {
-                        document.getElementById(id).src = "../img/star_unchecked.svg";
-                    } else {
-                        document.getElementById(id).src = "../img/star_checked.svg";
-                    }
+                    listTags();
                 }
             }
         });
     }
+
     function deleteTag(tagId, tagName) {
         if (confirm("Delete tag \"" + tagName + "\" ?")) {
 
@@ -46,6 +49,23 @@
                 }
             });
         }
+    }
+
+
+    function confirmSubTags(mainTagId) {
+
+        $.ajax({
+            crossDomain: true,
+            url: "http://localhost:8880/action",
+            data: {type: "modify-tag-group", main_tag_id: mainTagId, sub_tag_ids: getSelectedSubIds()},
+            method: "GET",
+            dataType: "json",
+            success: function (data) {
+                if (data.code == 0) {
+                    listTags();
+                }
+            }
+        });
     }
     
     function addTag() {
@@ -67,7 +87,7 @@
         }
     }
 
-    function editTag(tagId, tagName, tagDesc) {
+    function renameTag(tagId, tagName, tagDesc) {
         var tagName = prompt("Modify tag name \"" + tagName + "\", please input below, ", tagName);
         if (tagName != null && tagName != "") {
 
@@ -100,19 +120,141 @@
 
                     var tagsDiv = "<div id=\"tags\" style=\"display: block\"><div class=\"tag-bg tag-selected\" onclick='addTag()'>+ Add tag</div></div>";
                     for (var i = 0; i < tagList.length; i++) {
+                        var markStarImg = "";
+                        if (tagList[i].mark_star == 1) {
+                            markStarImg = `<img src="../img/star_checked.svg" style="width: 14px">`;
+                        }
+                        var subTagNamesText = "";
+                        if (tagList[i].sub_tag_names != "") {
+                            subTagNamesText = `<br><span style="line-height: 0.6em; font-size: 0.6em; color: #999">${tagList[i].sub_tag_names}</span>`;
+                        }
+
                         tagsDiv = tagsDiv + `
-                            <span style="display: inline-block">
-                                <span class="tag-bg tag-unselected">${tagList[i].name} (${tagList[i].count})</span>&nbsp;&nbsp;&nbsp;&nbsp;
-                                <img id="tag-mark-star-${tagList[i].id}" src="${tagList[i].mark_star == 1 ? "../img/star_checked.svg" : "../img/star_unchecked.svg"}" style="width: 14px; cursor: pointer; margin-right: 4px; margin-left: -8px" onclick="toggleMarkStar(${tagList[i].id})" />
-                                <img src="../img/delete.svg" style="width: 14px; cursor: pointer; margin-right: 4px" onclick="deleteTag(${tagList[i].id}, '${tagList[i].name}')">
-                                <img src="../img/edit.svg" style="width: 14px; cursor: pointer; margin-right: 12px" onclick="editTag(${tagList[i].id}, '${tagList[i].name}', '${tagList[i].desc}')">
-                            </span>`;
+                            <div class="tag-bg tag-unselected" title="${tagList[i].title}" style="margin-right: 10px; vertical-align: middle" onclick="showTagIndexDetail(${i})">
+                                ${markStarImg}
+                                ${tagList[i].name} (${tagList[i].count})
+                                ${subTagNamesText}
+                            </div>
+                        `;
                     }
                     document.getElementById("tags").innerHTML = tagsDiv;
                     document.getElementById("title-tags").innerHTML = `&nbsp;&nbsp;SAVED TAGS (${tagList.length})`;
+                    document.getElementById("tag-detail-container").innerHTML = ``;
                 }
             }
         });
+    }
+
+    function getSubTagDivId(subTagId) {
+        return "div-sub-tag-" + subTagId;
+    }
+
+    function toggleSubTagId(subTagId) {
+        var subTagDiv = document.getElementById(getSubTagDivId(subTagId));
+        if (subTagDiv.classList.contains("tag-selected")) {
+            subTagDiv.classList.remove("tag-selected");
+            subTagDiv.classList.add("tag-unselected");
+        } else {
+            subTagDiv.classList.remove("tag-unselected");
+            subTagDiv.classList.add("tag-selected");
+        }
+    }
+
+    function getSelectedSubIds() {
+        var subTagIds = "";
+        for (var i = 0; i < tagList.length; i++) {
+            var subTagDiv = document.getElementById(getSubTagDivId(tagList[i].id));
+            if (subTagDiv.classList.contains("tag-selected")) {
+                if (subTagIds == "") {
+                    subTagIds += tagList[i].id;
+                } else {
+                    subTagIds = subTagIds + "," + tagList[i].id;
+                }
+            }
+        }
+
+        return subTagIds;
+    }
+
+    function showTagIndexDetail(index) {
+        var subTagIds = [];
+        if (tagList[index].sub_tag_ids != "") {
+            subTagIds = tagList[index].sub_tag_ids.split(",");
+        }
+
+        var subTagsDiv = ``;
+        for (var i = 0; i < tagList.length; i++) {
+            var isSelected = false;
+            for (var j = 0; j < subTagIds.length; j++) {
+                if (tagList[i].id == subTagIds[j]) {
+                    isSelected = true;
+                    break;
+                }
+            }
+            subTagsDiv = subTagsDiv + `
+                <div class="tag-bg ${isSelected ? 'tag-selected' : 'tag-unselected'}" title="${tagList[i].title}" style="margin-right: 10px" onclick="toggleSubTagId(${tagList[i].id})" id="${getSubTagDivId(tagList[i].id)}">${tagList[i].name}</div>
+
+            `;
+        }
+
+
+        document.getElementById("tag-detail-container").innerHTML = `
+
+            <div class='tag-title' id="tag-info-title">&nbsp;&nbsp;TAG 「${tagList[index].name}」 INFORMATION</div>
+
+
+            <table>
+                <tr>
+                    <td>
+                        <div class="tag-bg tag-selected" onclick="toggleMarkStar(${tagList[index].id})" style="margin-right: 10px">
+                            <img src="${tagList[index].mark_star == 1 ? "../img/star_checked.svg" : "../img/star_unchecked.svg"}" style="width: 14px">
+                            &nbsp;&nbsp;${tagList[index].mark_star == 1 ? "Unmark Favorite" : "Mark Favorite"}
+                        </div>
+                    </td>
+                    <td>
+                        <div style="font-size: 1.6em; line-height: 1.6em">${tagList[index].mark_star == 1 ? "To remove it from favorite" : "To add it to favorite"}</div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <div class="tag-bg tag-selected" onclick="renameTag(${tagList[index].id}, '${tagList[index].name}', '${tagList[index].desc}')"style="margin-right: 10px">
+                            <img src="../img/rename.svg" style="width: 14px">
+                            &nbsp;&nbsp;Rename
+                        </div>
+                    </td>
+                    <td>
+                        <div style="font-size: 1.6em; line-height: 1.6em">Rename this tag's display name to</div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <div class="tag-bg tag-selected" onclick="deleteTag(${tagList[index].id}, '${tagList[index].name}')"style="margin-right: 10px">
+                            <img src="../img/delete.svg" style="width: 14px">
+                            &nbsp;&nbsp;Delete
+                        </div>
+                    </td>
+                    <td>
+                        <div style="font-size: 1.6em; line-height: 1.6em">Delete this tag from lib, and this option can not be restored</div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <div class="tag-bg tag-selected" onclick="confirmSubTags(${tagList[index].id})"style="margin-right: 10px">
+                            <img src="../img/done.svg" style="width: 14px">
+                            &nbsp;&nbsp;Cofirm Sub Tags
+                        </div>
+                        <br>
+                        <div style="font-size: 1.6em; display: inline-block; width: 150px; line-height: 1.6em">Select the tags from right side as sub tags for tag "${tagList[index].name}", and click the topside button to confirm it.</div>
+                    </td>
+                    <td>
+                        ${subTagsDiv}
+                    </td>
+                </tr>
+            </table>
+        `;
     }
 
 </script>
@@ -122,8 +264,8 @@
     <tr>
         <td>
             <div id="title-tags" class='tag-title'>&nbsp;&nbsp;SAVED TAGS</div>
-            <div id="tags" style="display: block"><div class="tag-bg tag-selected" onclick='addTag()'>+ Add tag</div></div>
-
+            <div id="tags" style="display: block;"><div class="tag-bg tag-selected" onclick='addTag()'>+ Add tag</div></div>
+            <div id="tag-detail-container"></div>
             <div class='tag-title'>&nbsp;&nbsp;RUN SCRIPTS</div>
             <div style="display: inline-block"><div class="tag-bg tag-unselected">Parse Local Videos</div></div>
         </td>
